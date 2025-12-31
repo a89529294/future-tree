@@ -13,3 +13,4 @@ count.txt
 todos.json
 .env.development
 .env.production
+.info
