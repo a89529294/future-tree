@@ -8,6 +8,7 @@ export const loginFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     console.log(data.email)
     console.log(data.password)
+    console.error('PM2 LOG TEST: Server starting...')
 
     // Find the user
     const user = {
