@@ -14,8 +14,8 @@
     "check": "prettier --write . && eslint --fix",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/db/seed.ts",
-    "db:push:prod": "NODE_NEV=production drizzle-kit push",
-    "db:seed:prod": "NODE_NEV=production tsx src/db/seed.ts",
+    "db:push:prod": "NODE_ENV=production drizzle-kit push",
+    "db:seed:prod": "NODE_ENV=production tsx src/db/seed.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
