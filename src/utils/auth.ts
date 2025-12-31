@@ -6,6 +6,9 @@ import { useAppSession } from '@/utils/session'
 export const loginFn = createServerFn({ method: 'POST' })
   .inputValidator((d: { email: string; password: string }) => d)
   .handler(async ({ data }) => {
+    console.log(data.email)
+    console.log(data.password)
+
     // Find the user
     const user = {
       email: 'admin@example.com',
