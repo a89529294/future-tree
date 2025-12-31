@@ -10,7 +10,7 @@ export const loginFn = createServerFn({ method: 'POST' })
     const user = {
       email: 'admin@example.com',
       password:
-        '0394a2ede332c9a13eb82e9b24631604c31df978b4e2f0fbd2c549944f9d79a536ceea9b92c6170cbbf0153ef33a4ff57321e17b7a5fadc33f7023ddd325da47',
+        'f91554cd2040c2ddcf788d2a839d758147abece62d76149d82e9a204f26764bec446f754318c9741c191368143cd1c3335e9586b6f626a41d78356e1ac2ae492',
     }
 
     // Check if the user exists
