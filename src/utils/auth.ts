@@ -52,10 +52,16 @@ export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
 
 export const fetchStaff = createServerFn({ method: 'GET' }).handler(
   async () => {
+    console.error('fetchStaff called')
     const session = await useAppSession()
+    console.error('Session data:', session.data)
 
-    if (!session.data.userEmail) return null
+    if (!session.data.userEmail) {
+      console.error('No userEmail in session')
+      return null
+    }
 
+    console.error('Returning user:', session.data.userEmail)
     return {
       email: session.data.userEmail,
     }

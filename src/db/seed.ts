@@ -2,17 +2,11 @@ import 'dotenv/config'
 
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import pg from 'pg'
 
 import * as schema from '@/db/schema'
 import { hashPassword } from '@/utils/password'
 
-const { Pool } = pg
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-})
-const db = drizzle({ client: pool, schema })
+const db = drizzle(process.env.DATABASE_URL!)
 
 async function seed() {
   console.log('Starting seed...')
@@ -256,7 +250,6 @@ async function seed() {
     console.error('Error seeding database:', error)
     throw error
   } finally {
-    await pool.end()
   }
 }
 
