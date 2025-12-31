@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
+    "start": "PORT=3001 node .output/server/index.mjs",
+    "prod": "pnpm run build && pnpm run start",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
