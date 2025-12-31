@@ -7,7 +7,13 @@ export default defineConfig({
   dialect: 'postgresql',
   schema: './src/db/schema.ts',
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
-    ssl: { rejectUnauthorized: false },
+    host: 'future-tree.c1yk6eyoi9ir.ap-east-2.rds.amazonaws.com',
+    port: 5432,
+    user: 'postgres',
+    password: process.env.DB_PASSWORD!, // Don't put password in URL
+    database: 'postgres',
+    ssl: {
+      rejectUnauthorized: false,
+    },
   },
 })
