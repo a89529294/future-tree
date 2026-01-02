@@ -1,5 +1,3 @@
-import 'dotenv/config'
-
 import { defineConfig } from 'drizzle-kit'
 
 import { dbConfig } from './src/db/config'

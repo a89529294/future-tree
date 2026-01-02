@@ -13,9 +13,9 @@
     "format": "prettier",
     "check": "prettier --write . && eslint --fix",
     "db:push": "drizzle-kit push",
-    "db:seed": "tsx src/db/seed.ts",
+    "db:seed": "tsx --env-file=.env src/db/seed.ts",
     "db:push:prod": "NODE_ENV=production drizzle-kit push",
-    "db:seed:prod": "NODE_ENV=production tsx src/db/seed.ts",
+    "db:seed:prod": "NODE_ENV=production --env-file=.env tsx src/db/seed.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
@@ -28,7 +28,6 @@
     "@tanstack/router-plugin": "^1.132.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "lucide-react": "^0.561.0",
     "nitro": "latest",

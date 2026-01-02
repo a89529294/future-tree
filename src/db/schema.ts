@@ -118,9 +118,15 @@ export const locations = pgTable('locations', {
 
 // Relations
 export const staffRelations = relations(staff, ({ many }) => ({
-  roleAssignments: many(staffRoleAssignments),
-  storeAccess: many(staffStoreAccess),
-  locationAccess: many(staffLocationAccess),
+  roleAssignments: many(staffRoleAssignments, {
+    relationName: 'roleAssignments',
+  }),
+  storeAccess: many(staffStoreAccess, {
+    relationName: 'storeAccess',
+  }),
+  locationAccess: many(staffLocationAccess, {
+    relationName: 'locationAccess',
+  }),
 }))
 
 export const storesRelations = relations(stores, ({ many }) => ({
@@ -146,6 +152,7 @@ export const staffRoleAssignmentsRelations = relations(
     staff: one(staff, {
       fields: [staffRoleAssignments.staffId],
       references: [staff.id],
+      relationName: 'roleAssignments',
     }),
     role: one(roles, {
       fields: [staffRoleAssignments.roleId],
@@ -154,6 +161,7 @@ export const staffRoleAssignmentsRelations = relations(
     assignedByStaff: one(staff, {
       fields: [staffRoleAssignments.assignedBy],
       references: [staff.id],
+      relationName: 'assignedRoles',
     }),
   }),
 )
@@ -164,6 +172,7 @@ export const staffStoreAccessRelations = relations(
     staff: one(staff, {
       fields: [staffStoreAccess.staffId],
       references: [staff.id],
+      relationName: 'storeAccess',
     }),
     store: one(stores, {
       fields: [staffStoreAccess.storeId],
@@ -172,6 +181,7 @@ export const staffStoreAccessRelations = relations(
     grantedByStaff: one(staff, {
       fields: [staffStoreAccess.grantedBy],
       references: [staff.id],
+      relationName: 'grantedStoreAccess',
     }),
   }),
 )
@@ -182,6 +192,7 @@ export const staffLocationAccessRelations = relations(
     staff: one(staff, {
       fields: [staffLocationAccess.staffId],
       references: [staff.id],
+      relationName: 'locationAccess',
     }),
     location: one(locations, {
       fields: [staffLocationAccess.locationId],
@@ -190,6 +201,7 @@ export const staffLocationAccessRelations = relations(
     grantedByStaff: one(staff, {
       fields: [staffLocationAccess.grantedBy],
       references: [staff.id],
+      relationName: 'grantedLocationAccess',
     }),
   }),
 )

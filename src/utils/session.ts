@@ -1,5 +1,3 @@
-import 'dotenv/config'
-
 import { useSession } from '@tanstack/react-start/server'
 
 export type User = {

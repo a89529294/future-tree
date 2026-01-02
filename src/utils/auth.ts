@@ -1,5 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
+import { eq } from 'drizzle-orm'
 
+import { db } from '@/db'
+import { staff } from '@/db/schema'
 import { hashPassword } from '@/utils/password'
 import { useAppSession } from '@/utils/session'
 
@@ -10,12 +13,14 @@ export const loginFn = createServerFn({ method: 'POST' })
     console.log(data.password)
     console.error('PM2 LOG TEST: Server starting...')
 
-    // Find the user
-    const user = {
-      email: 'admin@example.com',
-      password:
-        'f91554cd2040c2ddcf788d2a839d758147abece62d76149d82e9a204f26764bec446f754318c9741c191368143cd1c3335e9586b6f626a41d78356e1ac2ae492',
-    }
+    // Find the user by email
+    const users = await db
+      .select()
+      .from(staff)
+      .where(eq(staff.email, data.email))
+      .limit(1)
+
+    const user = users[0]
 
     // Check if the user exists
     if (!user) {
@@ -26,10 +31,21 @@ export const loginFn = createServerFn({ method: 'POST' })
       }
     }
 
+    // Check if the user is active
+    if (!user.isActive) {
+      return {
+        error: true,
+        message: 'Account is inactive. Please contact an administrator.',
+      }
+    }
+
     // Check if the password is correct
     const hashedPassword = await hashPassword(data.password)
 
-    if (user.password !== hashedPassword) {
+    console.log(data.password)
+    console.log(hashedPassword)
+
+    if (user.passwordHash !== hashedPassword) {
       return {
         error: true,
         message: 'Incorrect password',
@@ -38,6 +54,8 @@ export const loginFn = createServerFn({ method: 'POST' })
 
     // Create a session
     const session = await useAppSession()
+
+    console.log('yay?')
 
     // Store the user's email in the session
     await session.update({
@@ -52,16 +70,12 @@ export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
 
 export const fetchStaff = createServerFn({ method: 'GET' }).handler(
   async () => {
-    console.error('fetchStaff called')
     const session = await useAppSession()
-    console.error('Session data:', session.data)
 
     if (!session.data.userEmail) {
-      console.error('No userEmail in session')
       return null
     }
 
-    console.error('Returning user:', session.data.userEmail)
     return {
       email: session.data.userEmail,
     }
