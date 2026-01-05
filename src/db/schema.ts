@@ -1,6 +1,8 @@
 import { relations } from 'drizzle-orm'
 import {
   boolean,
+  decimal,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -15,6 +17,18 @@ export const roleEnum = pgEnum('role', [
   'store_admin',
   'location_admin',
   'staff',
+])
+
+export const machineStatusEnum = pgEnum('machine_status', [
+  'online',
+  'offline',
+  'maintenance',
+])
+
+export const transactionStatusEnum = pgEnum('transaction_status', [
+  'pending',
+  'paid',
+  'failed',
 ])
 
 // Staff table - Core staff authentication and profile
@@ -86,6 +100,20 @@ export const staffLocationAccess = pgTable('staff_location_access', {
   grantedBy: uuid('granted_by').references(() => staff.id),
 })
 
+// Staff Permissions - Individual permissions per staff member
+// Add row = grant permission, Delete row = revoke permission
+export const staffPermissions = pgTable('staff_permissions', {
+  id: uuid().defaultRandom().primaryKey(),
+  staffId: uuid('staff_id')
+    .references(() => staff.id, { onDelete: 'cascade' })
+    .notNull(),
+  permission: varchar('permission', { length: 50 }).notNull(), // e.g., 'machines.delete'
+  grantedAt: timestamp('granted_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  grantedBy: uuid('granted_by').references(() => staff.id),
+})
+
 // Stores table
 export const stores = pgTable('stores', {
   id: uuid().defaultRandom().primaryKey(),
@@ -116,6 +144,90 @@ export const locations = pgTable('locations', {
     .notNull(),
 })
 
+export const machines = pgTable('machines', {
+  id: uuid().defaultRandom().primaryKey(),
+  locationId: uuid('location_id')
+    .references(() => locations.id, { onDelete: 'cascade' })
+    .notNull(),
+  thingId: varchar('thing_id', { length: 255 }).unique().notNull(), // e.g., "machine_01"
+  displayName: varchar('display_name', { length: 255 }), // e.g., "Lobby Machine"
+  status: machineStatusEnum('status').default('offline').notNull(),
+  lastHeartbeat: timestamp('last_heartbeat', { withTimezone: true }),
+  notes: text('notes'), // Admin notes about this machine
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+})
+
+export const inventory = pgTable('inventory', {
+  id: uuid().defaultRandom().primaryKey(),
+  machineId: uuid('machine_id')
+    .references(() => machines.id, { onDelete: 'cascade' })
+    .notNull(),
+  cellNumber: integer('cell_number').notNull(), // 1 to 5
+
+  // Product details (configured by admin)
+  productName: varchar('product_name', { length: 255 }),
+  productDescription: text('product_description'),
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  imageUrl: text('image_url'),
+
+  // Stock status
+  stockAvailable: boolean('stock_available').default(false).notNull(),
+  lastRestocked: timestamp('last_restocked', { withTimezone: true }),
+
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+})
+
+export const transactions = pgTable('transactions', {
+  id: uuid().defaultRandom().primaryKey(),
+  machineId: uuid('machine_id')
+    .references(() => machines.id)
+    .notNull(),
+
+  // Payment info (will be fake for V1)
+  totalAmount: decimal('total_amount', { precision: 10, scale: 2 }).notNull(),
+  paymentStatus: transactionStatusEnum('payment_status')
+    .default('pending')
+    .notNull(),
+  paymentReferenceId: varchar('payment_reference_id', { length: 255 }), // For future NewebPay integration
+
+  // User info (minimal for guest checkout)
+  userIpAddress: varchar('user_ip_address', { length: 45 }), // IPv6 support
+  userAgent: text('user_agent'),
+
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+})
+
+export const transactionItems = pgTable('transaction_items', {
+  id: uuid().defaultRandom().primaryKey(),
+  transactionId: uuid('transaction_id')
+    .references(() => transactions.id, { onDelete: 'cascade' })
+    .notNull(),
+  cellNumber: integer('cell_number').notNull(),
+
+  // Snapshot of product at time of purchase
+  productName: varchar('product_name', { length: 255 }).notNull(),
+  productDescription: text('product_description'),
+  priceAtPurchase: decimal('price_at_purchase', {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
+})
+
 // Relations
 export const staffRelations = relations(staff, ({ many }) => ({
   roleAssignments: many(staffRoleAssignments, {
@@ -126,6 +238,9 @@ export const staffRelations = relations(staff, ({ many }) => ({
   }),
   locationAccess: many(staffLocationAccess, {
     relationName: 'locationAccess',
+  }),
+  permissions: many(staffPermissions, {
+    relationName: 'permissions',
   }),
 }))
 
@@ -141,6 +256,43 @@ export const locationsRelations = relations(locations, ({ one, many }) => ({
   }),
   staffAccess: many(staffLocationAccess),
 }))
+
+export const machinesRelations = relations(machines, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [machines.locationId],
+    references: [locations.id],
+  }),
+  inventory: many(inventory),
+  transactions: many(transactions),
+}))
+
+export const inventoryRelations = relations(inventory, ({ one }) => ({
+  machine: one(machines, {
+    fields: [inventory.machineId],
+    references: [machines.id],
+  }),
+}))
+
+export const transactionsRelations = relations(
+  transactions,
+  ({ one, many }) => ({
+    machine: one(machines, {
+      fields: [transactions.machineId],
+      references: [machines.id],
+    }),
+    items: many(transactionItems),
+  }),
+)
+
+export const transactionItemsRelations = relations(
+  transactionItems,
+  ({ one }) => ({
+    transaction: one(transactions, {
+      fields: [transactionItems.transactionId],
+      references: [transactions.id],
+    }),
+  }),
+)
 
 export const rolesRelations = relations(roles, ({ many }) => ({
   staffAssignments: many(staffRoleAssignments),
@@ -202,6 +354,22 @@ export const staffLocationAccessRelations = relations(
       fields: [staffLocationAccess.grantedBy],
       references: [staff.id],
       relationName: 'grantedLocationAccess',
+    }),
+  }),
+)
+
+export const staffPermissionsRelations = relations(
+  staffPermissions,
+  ({ one }) => ({
+    staff: one(staff, {
+      fields: [staffPermissions.staffId],
+      references: [staff.id],
+      relationName: 'permissions',
+    }),
+    grantedByStaff: one(staff, {
+      fields: [staffPermissions.grantedBy],
+      references: [staff.id],
+      relationName: 'grantedPermissions',
     }),
   }),
 )

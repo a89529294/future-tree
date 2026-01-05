@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-router'
 import { useState } from 'react'
 
-import { loginFn } from '@/utils/auth'
+import { loginFn } from '@/utils/auth/authenticate'
 
 export const Route = createFileRoute('/admin/login')({
   beforeLoad: ({ context }) => {

@@ -1,16 +1,9 @@
 import { useSession } from '@tanstack/react-start/server'
 
-export type User = {
-  email: string
-  password: string
-}
-
-type SessionUser = {
-  userEmail: User['email']
-}
+import type { SessionState } from './types-and-constants'
 
 export function useAppSession() {
-  return useSession<SessionUser>({
+  return useSession<SessionState>({
     name: 'staff-session',
     password: process.env.STAFF_COOKIE_SECRET!,
   })

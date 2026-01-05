@@ -11,7 +11,7 @@ import * as React from 'react'
 import { DefaultCatchBoundary } from '@/components/default-catch-boundary'
 import { NotFound } from '@/components/not-found'
 import appCss from '@/styles.css?url'
-import { fetchStaff } from '@/utils/auth'
+import { fetchStaff } from '@/utils/auth/authenticate'
 
 export const Route = createRootRoute({
   beforeLoad: async () => {
@@ -50,7 +50,6 @@ export const Route = createRootRoute({
         sizes: '16x16',
         href: '/favicon-16x16.png',
       },
-      { rel: 'manifest', href: '/site.webmanifest', color: '#fffff' },
       { rel: 'icon', href: '/favicon.ico' },
     ],
   }),

@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 
 import { createPool } from '@/db/config'
 import * as schema from '@/db/schema'
-import { hashPassword } from '@/utils/password'
+import { hashPassword } from '@/utils/auth/password'
 
 export const db = drizzle(createPool())
 
@@ -18,8 +18,10 @@ async function seed() {
     await db.execute(sql`SET session_replication_role = 'replica';`)
 
     // Clear tables in correct order (child tables first)
+    await db.delete(schema.machines)
     await db.delete(schema.staffLocationAccess)
     await db.delete(schema.staffStoreAccess)
+    await db.delete(schema.staffPermissions)
     await db.delete(schema.staffRoleAssignments)
     await db.delete(schema.locations)
     await db.delete(schema.stores)
@@ -227,6 +229,198 @@ async function seed() {
     })
 
     console.log('Location access granted successfully')
+
+    // 8. Grant permissions based on roles
+    console.log('Granting permissions...')
+
+    // Super admin gets all permissions
+    const superAdminPermissions = [
+      'stores.view',
+      'stores.create',
+      'stores.edit',
+      'stores.delete',
+      'locations.view',
+      'locations.create',
+      'locations.edit',
+      'locations.delete',
+      'machines.view',
+      'machines.create',
+      'machines.edit',
+      'machines.delete',
+      'inventory.view',
+      'inventory.create',
+      'inventory.edit',
+      'inventory.delete',
+      'inventory.restock',
+      'transactions.view',
+      'transactions.create',
+      'transactions.edit',
+      'transactions.delete',
+      'transactions.export',
+      'staff.view',
+      'staff.create',
+      'staff.edit',
+      'staff.delete',
+    ]
+
+    for (const permission of superAdminPermissions) {
+      await db.insert(schema.staffPermissions).values({
+        staffId: superAdmin.id,
+        permission,
+        grantedBy: superAdmin.id,
+      })
+    }
+
+    // Store admins get store admin permissions
+    const storeAdminPermissions = [
+      'stores.view',
+      'stores.edit',
+      'locations.view',
+      'locations.create',
+      'locations.edit',
+      'locations.delete',
+      'machines.view',
+      'machines.create',
+      'machines.edit',
+      'machines.delete',
+      'inventory.view',
+      'inventory.create',
+      'inventory.edit',
+      'inventory.delete',
+      'inventory.restock',
+      'transactions.view',
+      'transactions.export',
+      'staff.view',
+      'staff.create',
+      'staff.edit',
+      'staff.delete',
+    ]
+
+    for (const permission of storeAdminPermissions) {
+      await db.insert(schema.staffPermissions).values({
+        staffId: storeAdmin1.id,
+        permission,
+        grantedBy: superAdmin.id,
+      })
+      await db.insert(schema.staffPermissions).values({
+        staffId: storeAdmin2.id,
+        permission,
+        grantedBy: superAdmin.id,
+      })
+    }
+
+    // Location admin gets location admin permissions
+    const locationAdminPermissions = [
+      'stores.view',
+      'locations.view',
+      'locations.edit',
+      'machines.view',
+      'machines.create',
+      'machines.edit',
+      'inventory.view',
+      'inventory.create',
+      'inventory.edit',
+      'inventory.restock',
+      'transactions.view',
+      'staff.view',
+      'staff.create',
+      'staff.edit',
+    ]
+
+    for (const permission of locationAdminPermissions) {
+      await db.insert(schema.staffPermissions).values({
+        staffId: locationAdmin.id,
+        permission,
+        grantedBy: superAdmin.id,
+      })
+    }
+
+    console.log('Permissions granted successfully')
+
+    console.log('Creating machines...')
+
+    const machines = []
+
+    // 3 machines in lobby
+    for (let i = 1; i <= 3; i++) {
+      const [machine] = await db
+        .insert(schema.machines)
+        .values({
+          locationId: store1Location1.id,
+          thingId: `machine_${i.toString().padStart(2, '0')}`,
+          displayName: `Lobby Unit ${i}`,
+          status: 'offline',
+          notes: 'V1 test machine',
+        })
+        .returning()
+      machines.push(machine)
+    }
+
+    // 2 machines on 2nd floor
+    for (let i = 4; i <= 5; i++) {
+      const [machine] = await db
+        .insert(schema.machines)
+        .values({
+          locationId: store1Location1.id,
+          thingId: `machine_${i.toString().padStart(2, '0')}`,
+          displayName: `2F Unit ${i - 3}`,
+          status: 'offline',
+          notes: 'V1 test machine',
+        })
+        .returning()
+      machines.push(machine)
+    }
+
+    console.log('Creating inventory...')
+
+    const products = [
+      {
+        name: 'Snack Box A',
+        description: '2 bags of chips, 1 chocolate bar, 1 cookie pack',
+        price: '50.00',
+        imageUrl: 'https://picsum.photos/seed/snackA/400/400',
+      },
+      {
+        name: 'Drink Bundle',
+        description: '2 cans of Coke, 1 bottle of tea',
+        price: '30.00',
+        imageUrl: 'https://picsum.photos/seed/drink/400/400',
+      },
+      {
+        name: 'Healthy Mix',
+        description: '1 granola bar, 1 fruit cup, 1 nuts pack',
+        price: '45.00',
+        imageUrl: 'https://picsum.photos/seed/healthy/400/400',
+      },
+      {
+        name: 'Premium Box',
+        description: 'Imported snacks: 1 Japanese KitKat, 1 Pocky, 1 Hi-Chew',
+        price: '120.00',
+        imageUrl: 'https://picsum.photos/seed/premium/400/400',
+      },
+      {
+        name: 'Energy Bundle',
+        description: '2 energy drinks, 1 protein bar',
+        price: '80.00',
+        imageUrl: 'https://picsum.photos/seed/energy/400/400',
+      },
+    ]
+
+    for (const machine of machines) {
+      for (let cellNumber = 1; cellNumber <= 5; cellNumber++) {
+        const product = products[cellNumber - 1]
+
+        await db.insert(schema.inventory).values({
+          machineId: machine.id,
+          cellNumber,
+          productName: product.name,
+          productDescription: product.description,
+          price: product.price,
+          imageUrl: product.imageUrl,
+          stockAvailable: true, // All stocked initially
+        })
+      }
+    }
 
     console.log('\n=== Seed completed successfully! ===')
     console.log('\nCreated users (all with password: password123):')
