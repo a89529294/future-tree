@@ -1,3 +1,4 @@
+import { redirect } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { eq } from 'drizzle-orm'
 
@@ -18,29 +19,19 @@ export const loginFn = createServerFn({ method: 'POST' })
 
     // Check if the user exists
     if (!user) {
-      return {
-        error: true,
-        userNotFound: true,
-        message: 'User not found',
-      }
+      throw new Error('使用者不存在')
     }
 
     // Check if the user is active
     if (!user.isActive) {
-      return {
-        error: true,
-        message: 'Account is inactive. Please contact an administrator.',
-      }
+      throw new Error('無效使用者')
     }
 
     // Check if the password is correct
     const hashedPassword = await hashPassword(data.password)
 
     if (user.passwordHash !== hashedPassword) {
-      return {
-        error: true,
-        message: 'Incorrect password',
-      }
+      throw new Error('密碼不正確')
     }
 
     // Fetch user with relations
@@ -58,11 +49,9 @@ export const loginFn = createServerFn({ method: 'POST' })
       },
     })
 
-    if (!result)
-      return {
-        error: true,
-        message: 'Impossible coniditon',
-      }
+    if (!result) {
+      throw new Error('Impossible condition')
+    }
 
     // Determine the highest role (priority: super_admin > store_admin > location_admin > staff)
     const rolePriority: Record<SessionUser['role'], number> = {

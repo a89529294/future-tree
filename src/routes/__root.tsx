@@ -10,6 +10,7 @@ import * as React from 'react'
 
 import { DefaultCatchBoundary } from '@/components/default-catch-boundary'
 import { NotFound } from '@/components/not-found'
+import { Toaster } from '@/components/ui/sonner'
 import appCss from '@/styles.css?url'
 import { fetchStaff } from '@/utils/auth/authenticate'
 
@@ -74,12 +75,13 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html>
+    <html className="dark">
       <head>
         <HeadContent />
       </head>
       <body>
         {children}
+        <Toaster />
         <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>

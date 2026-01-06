@@ -5,6 +5,7 @@ import {
   useRouter,
 } from '@tanstack/react-router'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 import { loginFn } from '@/utils/auth/authenticate'
 
@@ -24,7 +25,6 @@ function LoginComponent() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,7 +33,7 @@ function LoginComponent() {
       await router.invalidate()
       navigate({ to: '/dashboard' })
     } catch (err) {
-      setError('Invalid credentials')
+      toast.error(err instanceof Error ? err.message : '未知錯誤')
     }
   }
 
@@ -46,11 +46,6 @@ function LoginComponent() {
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="text-red-400 text-sm text-center bg-red-400/10 py-2 rounded">
-              {error}
-            </div>
-          )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <input

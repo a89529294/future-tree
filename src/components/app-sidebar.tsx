@@ -1,5 +1,18 @@
-import { Building2, Cog, MapPin, SettingsIcon } from 'lucide-react'
+import { Link, useLocation } from '@tanstack/react-router'
+import {
+  Building2,
+  ChevronDown,
+  ChevronRight,
+  MapPin,
+  PlusIcon,
+  StoreIcon,
+} from 'lucide-react'
 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import type { SidebarData } from '@/data/sidebar-data'
 import { usePermission } from '@/hooks/use-permission'
 
@@ -9,6 +22,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -22,6 +36,12 @@ type AppSidebarProps = {
 }
 
 export function AppSidebar({ data }: AppSidebarProps) {
+  const pathname = useLocation({
+    select: (location) => location.pathname,
+  })
+
+  console.log(pathname)
+
   const canViewStores = usePermission('stores.view')
   const canViewLocations = usePermission('locations.view')
   const canViewMachines = usePermission('machines.view')
@@ -50,72 +70,113 @@ export function AppSidebar({ data }: AppSidebarProps) {
 
   return (
     <Sidebar>
+      <SidebarHeader className="h-16 flex flex-row items-center px-4">
+        <img className="size-10 object-contain" src="/future-tree-logo.png" />
+        <span className="text-xl font-bold">科技樹</span>
+      </SidebarHeader>
       <SidebarContent>
         {/* Stores Section */}
         {canViewStores && data.stores.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>
-              <Building2 className="mr-2 h-4 w-4" />
-              Stores
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {data.stores.map((store) => (
-                  <SidebarMenuItem key={store.id}>
-                    <SidebarMenuButton asChild>
-                      <a href={`/stores/${store.id}`}>
-                        <span>{store.name}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <Collapsible className="group/collapsible">
+            <SidebarGroup>
+              <SidebarGroupLabel asChild className="text-sm">
+                <CollapsibleTrigger>
+                  <Building2 className="mr-2 h-4 w-4" />
+                  廠商
+                  <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {data.stores.map((store) => (
+                      <SidebarMenuItem key={store.id}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={pathname.startsWith(`/stores/${store.id}`)}
+                        >
+                          <Link
+                            to={'/stores/$storeId'}
+                            params={{ storeId: store.id }}
+                          >
+                            <span>{store.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                    <SidebarMenuItem key={'new-store'}>
+                      <SidebarMenuButton variant={'outline'} asChild>
+                        <Link to="/stores/new" className="flex justify-between">
+                          新增廠商 <PlusIcon />
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
         )}
 
         {/* Locations Section */}
         {canViewLocations && data.locations.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>
-              <MapPin className="mr-2 h-4 w-4" />
-              Locations
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {Object.entries(locationsByStore).map(
-                  ([storeId, { storeName, locations }]) => (
-                    <SidebarMenuItem key={storeId}>
-                      <SidebarMenuButton className="font-medium text-muted-foreground cursor-default">
-                        <span>{storeName}</span>
-                      </SidebarMenuButton>
-                      <SidebarMenuSub>
-                        {locations.map((location) => (
-                          <SidebarMenuSubItem key={location.id}>
-                            <SidebarMenuSubButton asChild>
-                              <a href={`/locations/${location.id}`}>
-                                <span>{location.name}</span>
-                              </a>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </SidebarMenuItem>
-                  ),
-                )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <Collapsible className="group/collapsible">
+            <SidebarGroup>
+              <SidebarGroupLabel asChild className="text-sm">
+                <CollapsibleTrigger>
+                  <MapPin className="mr-2 h-4 w-4" />
+                  地點
+                  <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {Object.entries(locationsByStore).map(
+                      ([storeId, { storeName, locations }]) => (
+                        <Collapsible className="group/sub-collapsible">
+                          <SidebarMenuItem key={storeId}>
+                            <CollapsibleTrigger asChild>
+                              <SidebarMenuButton className=" cursor-default">
+                                <span>{storeName}</span>
+                                <ChevronRight className="ml-auto transition-transform group-data-[state=open]/sub-collapsible:-rotate-90" />
+                              </SidebarMenuButton>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <SidebarMenuSub>
+                                {locations.map((location) => (
+                                  <SidebarMenuSubItem key={location.id}>
+                                    <SidebarMenuSubButton asChild>
+                                      <Link
+                                        to="/locations/$locationId"
+                                        params={{ locationId: location.id }}
+                                      >
+                                        <span>{location.name}</span>
+                                      </Link>
+                                    </SidebarMenuSubButton>
+                                  </SidebarMenuSubItem>
+                                ))}
+                              </SidebarMenuSub>
+                            </CollapsibleContent>
+                          </SidebarMenuItem>
+                        </Collapsible>
+                      ),
+                    )}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
         )}
 
         {/* Machines Section - just a link for now */}
         {canViewMachines && (
           <SidebarGroup>
             <SidebarGroupLabel>
-              <SettingsIcon />
+              <StoreIcon />
               <SidebarMenuButton asChild>
                 <a href={'#'}>
-                  <span>Machines</span>
+                  <span>販賣機</span>
                 </a>
               </SidebarMenuButton>
             </SidebarGroupLabel>

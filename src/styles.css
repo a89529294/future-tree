@@ -128,6 +128,28 @@ code {
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+@theme {
+  --animate-slide-down: slide-down 0.2s ease-out;
+  --animate-slide-up: slide-up 0.2s ease-out;
+
+  @keyframes slide-down {
+    0% {
+      height: 0;
+    }
+    100% {
+      height: var(--radix-collapsible-content-height);
+    }
+  }
+  @keyframes slide-up {
+    0% {
+      height: var(--radix-collapsible-content-height);
+    }
+    100% {
+      height: 0;
+    }
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
