@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
+
 import { createPool } from '@/db/config'
-import * as schema from '@/db/schema'
+import * as schema from '@/db/schemas'
 
 // passing in schema enables the relational query API in your application code
 export const db = drizzle(createPool(), { schema })

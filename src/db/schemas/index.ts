@@ -11,6 +11,8 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
+import { stores } from '@/db/schemas/stores'
+
 // Enums
 export const roleEnum = pgEnum('role', [
   'super_admin',
@@ -112,20 +114,6 @@ export const staffPermissions = pgTable('staff_permissions', {
     .defaultNow()
     .notNull(),
   grantedBy: uuid('granted_by').references(() => staff.id),
-})
-
-// Stores table
-export const stores = pgTable('stores', {
-  id: uuid().defaultRandom().primaryKey(),
-  name: varchar('name', { length: 255 }).notNull(),
-  address: text('address'),
-  phoneNumber: varchar('phone_number', { length: 20 }),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
 })
 
 // Locations table
@@ -373,3 +361,5 @@ export const staffPermissionsRelations = relations(
     }),
   }),
 )
+
+export * from '@/db/schemas/stores'

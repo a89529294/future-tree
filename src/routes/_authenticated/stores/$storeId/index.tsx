@@ -1,42 +1,45 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useDeferredValue } from 'react'
 
 import { StoreForm } from '@/components/stores/store-form'
-
-// Mock data fetcher
-const fetchStore = async (id: string) => {
-  // Simulating an API call
-  await new Promise((resolve) => setTimeout(resolve, 100))
-  return {
-    id,
-    name: 'Main Street Bakery',
-    address: '123 Main St, Springfield, IL 62701',
-    phoneNumber: '217-555-0123',
-  }
-}
+import { Spinner } from '@/components/ui/spinner'
+import { storeQueryOptions, useStore } from '@/data/stores'
 
 export const Route = createFileRoute('/_authenticated/stores/$storeId/')({
-  loader: async ({ params }) => {
-    const store = await fetchStore(params.storeId)
-    return { store }
+  loader: ({ params, context }) => {
+    context.queryClient.ensureQueryData(storeQueryOptions(params.storeId))
   },
   component: StoreDetailComponent,
+  pendingComponent: () => (
+    <div className="h-full grid place-items-center">
+      <Spinner className="size-8" />
+    </div>
+  ),
 })
 
 function StoreDetailComponent() {
-  const { store } = Route.useLoaderData()
   const { storeId } = Route.useParams()
+  const deferredStoreId = useDeferredValue(storeId)
+  const { data: store } = useStore(deferredStoreId)
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">檢視廠商</h1>
       </div>
-      <StoreForm
-        initialData={{
-          ...store,
-          isReadOnly: true,
-        }}
-      />
+
+      <div
+        className={
+          storeId !== deferredStoreId ? 'opacity-50 transition-opacity' : ''
+        }
+      >
+        <StoreForm
+          key={store.id}
+          initialData={store}
+          mode={'view'}
+          storeId={storeId}
+        />
+      </div>
     </div>
   )
 }

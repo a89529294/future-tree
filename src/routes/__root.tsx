@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
+import type { QueryClient } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import {
-  createRootRoute,
+  createRootRouteWithContext,
   HeadContent,
   Outlet,
   Scripts,
@@ -14,7 +16,9 @@ import { Toaster } from '@/components/ui/sonner'
 import appCss from '@/styles.css?url'
 import { fetchStaff } from '@/utils/auth/authenticate'
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient
+}>()({
   beforeLoad: async () => {
     const user = await fetchStaff()
 
@@ -83,6 +87,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {children}
         <Toaster />
         <TanStackRouterDevtools position="bottom-right" />
+        <ReactQueryDevtools buttonPosition="bottom-left" />
         <Scripts />
       </body>
     </html>

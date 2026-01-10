@@ -1,9 +1,8 @@
-import { redirect } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { staff } from '@/db/schema'
+import { staff } from '@/db/schemas'
 import { hashPassword } from '@/utils/auth/password'
 import { useAppSession } from '@/utils/auth/session'
 

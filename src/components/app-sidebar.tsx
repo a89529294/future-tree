@@ -13,7 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import type { SidebarData } from '@/data/sidebar-data'
+import type { SidebarData, SidebarStore } from '@/data/sidebar-data'
 import { usePermission } from '@/hooks/use-permission'
 
 import {
@@ -36,12 +36,6 @@ type AppSidebarProps = {
 }
 
 export function AppSidebar({ data }: AppSidebarProps) {
-  const pathname = useLocation({
-    select: (location) => location.pathname,
-  })
-
-  console.log(pathname)
-
   const canViewStores = usePermission('stores.view')
   const canViewLocations = usePermission('locations.view')
   const canViewMachines = usePermission('machines.view')
@@ -77,45 +71,7 @@ export function AppSidebar({ data }: AppSidebarProps) {
       <SidebarContent>
         {/* Stores Section */}
         {canViewStores && data.stores.length > 0 && (
-          <Collapsible className="group/collapsible">
-            <SidebarGroup>
-              <SidebarGroupLabel asChild className="text-sm">
-                <CollapsibleTrigger>
-                  <Building2 className="mr-2 h-4 w-4" />
-                  廠商
-                  <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                </CollapsibleTrigger>
-              </SidebarGroupLabel>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {data.stores.map((store) => (
-                      <SidebarMenuItem key={store.id}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={pathname.startsWith(`/stores/${store.id}`)}
-                        >
-                          <Link
-                            to={'/stores/$storeId'}
-                            params={{ storeId: store.id }}
-                          >
-                            <span>{store.name}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                    <SidebarMenuItem key={'new-store'}>
-                      <SidebarMenuButton variant={'outline'} asChild>
-                        <Link to="/stores/new" className="flex justify-between">
-                          新增廠商 <PlusIcon />
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
+          <CollapsibleStores stores={data.stores} />
         )}
 
         {/* Locations Section */}
@@ -184,5 +140,56 @@ export function AppSidebar({ data }: AppSidebarProps) {
         )}
       </SidebarContent>
     </Sidebar>
+  )
+}
+
+function CollapsibleStores({ stores }: { stores: Array<SidebarStore> }) {
+  const pathname = useLocation({
+    select: (location) => location.pathname,
+  })
+
+  return (
+    <Collapsible
+      defaultOpen={stores.some((s) => pathname.startsWith(`/stores/${s.id}`))}
+      className="group/collapsible"
+    >
+      <SidebarGroup>
+        <SidebarGroupLabel asChild className="text-sm">
+          <CollapsibleTrigger>
+            <Building2 className="mr-2 h-4 w-4" />
+            廠商
+            <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+          </CollapsibleTrigger>
+        </SidebarGroupLabel>
+        <CollapsibleContent>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {stores.map((store) => (
+                <SidebarMenuItem key={store.id}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith(`/stores/${store.id}`)}
+                  >
+                    <Link
+                      to={'/stores/$storeId'}
+                      params={{ storeId: store.id }}
+                    >
+                      <span>{store.name}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              <SidebarMenuItem key={'new-store'}>
+                <SidebarMenuButton variant={'outline'} asChild>
+                  <Link to="/stores/new" className="flex justify-between">
+                    新增廠商 <PlusIcon />
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
   )
 }

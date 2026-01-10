@@ -1,7 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm'
 
 import { db } from '@/db'
-import type { transactionItems } from '@/db/schema'
+import type { transactionItems } from '@/db/schemas'
 import {
   inventory,
   locations,
@@ -9,7 +9,7 @@ import {
   staff,
   stores,
   transactions,
-} from '@/db/schema'
+} from '@/db/schemas'
 
 import type { UserScope } from './rules'
 import { DataRules, getUserScope, hasPermission } from './rules'

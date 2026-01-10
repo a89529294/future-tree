@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 
 import { createPool } from '@/db/config'
-import * as schema from '@/db/schema'
+import * as schema from '@/db/schemas'
 import { hashPassword } from '@/utils/auth/password'
 
 export const db = drizzle(createPool())

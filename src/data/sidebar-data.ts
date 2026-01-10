@@ -1,16 +1,17 @@
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
 import { inArray } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { locations, stores } from '@/db/schema'
+import { locations, stores } from '@/db/schemas'
 import { requireAuth } from '@/utils/auth/authorize'
 
-type SidebarStore = {
+export type SidebarStore = {
   id: string
   name: string
 }
 
-type SidebarLocation = {
+export type SidebarLocation = {
   id: string
   name: string
   storeId: string
@@ -22,7 +23,7 @@ export type SidebarData = {
   locations: Array<SidebarLocation>
 }
 
-export const fetchSidebarData = createServerFn({ method: 'GET' }).handler(
+const fetchSidebarData = createServerFn({ method: 'GET' }).handler(
   async (): Promise<SidebarData> => {
     const user = await requireAuth()
 
@@ -111,3 +112,10 @@ export const fetchSidebarData = createServerFn({ method: 'GET' }).handler(
     return { stores: [], locations: [] }
   },
 )
+
+export const fetchSidebarDataOptions = {
+  queryKey: ['sidebar'],
+  queryFn: fetchSidebarData,
+}
+
+export const useSidebarData = () => useSuspenseQuery(fetchSidebarDataOptions)
