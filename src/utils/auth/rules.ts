@@ -1,4 +1,9 @@
-import type { Permission, SessionUser } from './types-and-constants'
+import type {
+  Permission,
+  Role,
+  ScopeEntry,
+  SessionUser,
+} from './types-and-constants'
 
 // ============================================================================
 // TYPES
@@ -6,27 +11,27 @@ import type { Permission, SessionUser } from './types-and-constants'
 
 export type UserScope =
   | { type: 'global' }
-  | { type: 'store'; storeIds: Array<string> }
-  | { type: 'location'; locationIds: Array<string> }
+  | { type: 'store'; scopes: Array<string> }
+  | { type: 'branch'; scopes: Array<ScopeEntry> }
 
 export type ResourceType =
   | 'store'
-  | 'location'
+  | 'branch'
   | 'machine'
   | 'inventory'
   | 'transaction'
   | 'staff'
 
 // Maps action strings to their resource type
-const ACTION_TO_RESOURCE: Record<Permission, ResourceType> = {
+export const ACTION_TO_RESOURCE = {
   'stores.view': 'store',
   'stores.create': 'store',
   'stores.edit': 'store',
   'stores.delete': 'store',
-  'locations.view': 'location',
-  'locations.create': 'location',
-  'locations.edit': 'location',
-  'locations.delete': 'location',
+  'branches.view': 'branch',
+  'branches.create': 'branch',
+  'branches.edit': 'branch',
+  'branches.delete': 'branch',
   'machines.view': 'machine',
   'machines.create': 'machine',
   'machines.edit': 'machine',
@@ -45,7 +50,7 @@ const ACTION_TO_RESOURCE: Record<Permission, ResourceType> = {
   'staff.create': 'staff',
   'staff.edit': 'staff',
   'staff.delete': 'staff',
-}
+} as const satisfies Record<Permission, ResourceType>
 
 export type Action = keyof typeof ACTION_TO_RESOURCE
 
@@ -54,15 +59,15 @@ export type Action = keyof typeof ACTION_TO_RESOURCE
 // ============================================================================
 
 export function getUserScope(user: SessionUser): UserScope {
-  if (user.role === 'super_admin') {
+  if (user.scopeType === 'global') {
     return { type: 'global' }
   }
 
-  if (user.role === 'store_admin') {
-    return { type: 'store', storeIds: user.storeAccess }
+  if (user.scopeType === 'store') {
+    return { type: 'store', scopes: user.scopes.map((s) => s.storeId) }
   }
 
-  return { type: 'location', locationIds: user.locationAccess }
+  return { type: 'branch', scopes: user.scopes }
 }
 
 // ============================================================================
@@ -82,128 +87,106 @@ export function hasPermission(
 
 export const DataRules = {
   /**
-   * Check if scope includes store
+   * Helper for actions reserved for global scope (super_admin).
+   */
+  globalOnly(scope: UserScope): boolean {
+    return scope.type === 'global'
+  },
+
+  /**
+   * Check if scope includes store.
+   * Store-scoped user has array of store IDs.
    */
   store(scope: UserScope, storeId: string): boolean {
     if (scope.type === 'global') return true
-    if (scope.type === 'store') return scope.storeIds.includes(storeId)
+    if (scope.type === 'store') return scope.scopes.includes(storeId)
     return false
   },
 
   /**
-   * Check if scope includes location.
-   * Requires parent storeId for hierarchy checks.
+   * Check if scope includes branch.
+   * - Store-scoped user: can access any branch in their managed stores
+   * - Branch-scoped user: can only access their assigned branches
    */
-  location(
+  branch(
     scope: UserScope,
-    location: { id: string; storeId: string },
+    branch: { branchId: string; storeId: string },
   ): boolean {
-    switch (scope.type) {
-      case 'global':
-        return true
-      case 'store':
-        return scope.storeIds.includes(location.storeId)
-      case 'location':
-        return scope.locationIds.includes(location.id)
-    }
+    if (scope.type === 'global') return true
+    if (scope.type === 'store') return scope.scopes.includes(branch.storeId)
+    return scope.scopes.some((s) => s.scopeId === branch.branchId)
   },
 
   /**
    * Check if scope includes machine.
-   * Requires location info for hierarchy checks.
+   * - Store-scoped user: can access machines in their managed stores
+   * - Branch-scoped user: can only access machines in their assigned branches
    */
   machine(
     scope: UserScope,
-    machine: { locationId: string; storeId: string },
+    parentIds: { branchId: string; storeId: string },
   ): boolean {
-    switch (scope.type) {
-      case 'global':
-        return true
-      case 'store':
-        return scope.storeIds.includes(machine.storeId)
-      case 'location':
-        return scope.locationIds.includes(machine.locationId)
-    }
+    if (scope.type === 'global') return true
+    if (scope.type === 'store') return scope.scopes.includes(parentIds.storeId)
+    return scope.scopes.some((s) => s.scopeId === parentIds.branchId)
   },
 
   /**
    * Check if scope includes inventory item.
-   * Inventory is tied to machine, so same rules apply.
+   * - Store-scoped user: can access inventory in their managed stores
+   * - Location-scoped user: can only access inventory in their assigned locations
    */
   inventory(
     scope: UserScope,
-    inventory: { machineId: string; locationId: string; storeId: string },
+    inventory: { branchId: string; storeId: string },
   ): boolean {
-    return DataRules.machine(scope, {
-      locationId: inventory.locationId,
-      storeId: inventory.storeId,
-    })
+    if (scope.type === 'global') return true
+    if (scope.type === 'store') return scope.scopes.includes(inventory.storeId)
+    return scope.scopes.some((s) => s.scopeId === inventory.branchId)
   },
 
   /**
    * Check if scope includes transaction.
-   * Transaction is tied to machine, so same rules apply.
+   * - Store-scoped user: can access transactions in their managed stores
+   * - Location-scoped user: can only access transactions in their assigned locations
    */
   transaction(
     scope: UserScope,
-    transaction: { machineId: string; locationId: string; storeId: string },
+    transaction: { branchId: string; storeId: string },
   ): boolean {
-    return DataRules.machine(scope, {
-      locationId: transaction.locationId,
-      storeId: transaction.storeId,
-    })
+    if (scope.type === 'global') return true
+    if (scope.type === 'store')
+      return scope.scopes.includes(transaction.storeId)
+    return scope.scopes.some((s) => s.scopeId === transaction.branchId)
   },
 
   /**
    * Check if scope allows accessing a target staff member.
-   * Requires target's complete access profile.
+   * Rules:
+   * - super_admin: can access all staff
+   * - store_admin: can access all staff in their managed stores
+   * - location_admin: can access all staff in their managed locations
    */
   staff(
     scope: UserScope,
     targetStaff: {
-      storeAccess: Array<{ storeId: string }>
-      locationAccess: Array<{ locationId: string; storeId: string }>
+      role: Role
+      scopes: Array<ScopeEntry>
     },
   ): boolean {
-    switch (scope.type) {
-      case 'global':
-        return true
-      case 'store':
-        // Can access if target is in my store (directly or via location)
-        if (
-          targetStaff.storeAccess.some((s) =>
-            scope.storeIds.includes(s.storeId),
-          )
-        ) {
-          return true
-        }
-        return targetStaff.locationAccess.some((l) =>
-          scope.storeIds.includes(l.storeId),
-        )
-      case 'location':
-        // Can access if target is in my location
-        return targetStaff.locationAccess.some((l) =>
-          scope.locationIds.includes(l.locationId),
-        )
-    }
-  },
+    if (scope.type === 'global') return true
 
-  /**
-   * Special case: Location admin viewing their parent store.
-   * They can view the store if any of their locations belong to it.
-   */
-  storeViaLocation(
-    scope: UserScope,
-    storeId: string,
-    userLocationStoreIds: Array<string>,
-  ): boolean {
-    switch (scope.type) {
-      case 'global':
-        return true
-      case 'store':
-        return scope.storeIds.includes(storeId)
-      case 'location':
-        return userLocationStoreIds.includes(storeId)
+    // Cannot access super_admin
+    if (targetStaff.role === 'super_admin') return false
+
+    // If viewer has store-level access, check if target staff has any scope in those stores
+    if (scope.type === 'store') {
+      const viewerStoreIds = new Set(scope.scopes)
+      return targetStaff.scopes.some((s) => viewerStoreIds.has(s.storeId))
     }
+
+    // If viewer has location-level access, check if target staff has location-level access to the same location
+    const viewerLocationIds = new Set(scope.scopes.map((s) => s.scopeId))
+    return targetStaff.scopes.some((s) => viewerLocationIds.has(s.scopeId))
   },
 }

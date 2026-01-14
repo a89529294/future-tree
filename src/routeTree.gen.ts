@@ -12,11 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AuthenticatedTestRouteImport } from './routes/_authenticated/test'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedStoresNewRouteImport } from './routes/_authenticated/stores/new'
+import { Route as AuthenticatedStoresCreateRouteImport } from './routes/_authenticated/stores/create'
 import { Route as AuthenticatedStoresStoreIdIndexRouteImport } from './routes/_authenticated/stores/$storeId/index'
-import { Route as AuthenticatedLocationsLocationIdIndexRouteImport } from './routes/_authenticated/locations/$locationId/index'
 import { Route as AuthenticatedStoresStoreIdEditRouteImport } from './routes/_authenticated/stores/$storeId/edit'
+import { Route as AuthenticatedStoresStoreIdBranchesCreateRouteImport } from './routes/_authenticated/stores/$storeId/branches/create'
+import { Route as AuthenticatedStoresStoreIdBranchesBranchIdIndexRouteImport } from './routes/_authenticated/stores/$storeId/branches/$branchId/index'
+import { Route as AuthenticatedStoresStoreIdBranchesBranchIdEditRouteImport } from './routes/_authenticated/stores/$storeId/branches/$branchId/edit'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -32,26 +35,26 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTestRoute = AuthenticatedTestRouteImport.update({
+  id: '/test',
+  path: '/test',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedStoresNewRoute = AuthenticatedStoresNewRouteImport.update({
-  id: '/stores/new',
-  path: '/stores/new',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
+const AuthenticatedStoresCreateRoute =
+  AuthenticatedStoresCreateRouteImport.update({
+    id: '/stores/create',
+    path: '/stores/create',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedStoresStoreIdIndexRoute =
   AuthenticatedStoresStoreIdIndexRouteImport.update({
     id: '/stores/$storeId/',
     path: '/stores/$storeId/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedLocationsLocationIdIndexRoute =
-  AuthenticatedLocationsLocationIdIndexRouteImport.update({
-    id: '/locations/$locationId/',
-    path: '/locations/$locationId/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedStoresStoreIdEditRoute =
@@ -60,65 +63,101 @@ const AuthenticatedStoresStoreIdEditRoute =
     path: '/stores/$storeId/edit',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedStoresStoreIdBranchesCreateRoute =
+  AuthenticatedStoresStoreIdBranchesCreateRouteImport.update({
+    id: '/stores/$storeId/branches/create',
+    path: '/stores/$storeId/branches/create',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStoresStoreIdBranchesBranchIdIndexRoute =
+  AuthenticatedStoresStoreIdBranchesBranchIdIndexRouteImport.update({
+    id: '/stores/$storeId/branches/$branchId/',
+    path: '/stores/$storeId/branches/$branchId/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStoresStoreIdBranchesBranchIdEditRoute =
+  AuthenticatedStoresStoreIdBranchesBranchIdEditRouteImport.update({
+    id: '/stores/$storeId/branches/$branchId/edit',
+    path: '/stores/$storeId/branches/$branchId/edit',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/test': typeof AuthenticatedTestRoute
   '/admin/login': typeof AdminLoginRoute
-  '/stores/new': typeof AuthenticatedStoresNewRoute
+  '/stores/create': typeof AuthenticatedStoresCreateRoute
   '/stores/$storeId/edit': typeof AuthenticatedStoresStoreIdEditRoute
-  '/locations/$locationId': typeof AuthenticatedLocationsLocationIdIndexRoute
   '/stores/$storeId': typeof AuthenticatedStoresStoreIdIndexRoute
+  '/stores/$storeId/branches/create': typeof AuthenticatedStoresStoreIdBranchesCreateRoute
+  '/stores/$storeId/branches/$branchId/edit': typeof AuthenticatedStoresStoreIdBranchesBranchIdEditRoute
+  '/stores/$storeId/branches/$branchId': typeof AuthenticatedStoresStoreIdBranchesBranchIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/test': typeof AuthenticatedTestRoute
   '/admin/login': typeof AdminLoginRoute
-  '/stores/new': typeof AuthenticatedStoresNewRoute
+  '/stores/create': typeof AuthenticatedStoresCreateRoute
   '/stores/$storeId/edit': typeof AuthenticatedStoresStoreIdEditRoute
-  '/locations/$locationId': typeof AuthenticatedLocationsLocationIdIndexRoute
   '/stores/$storeId': typeof AuthenticatedStoresStoreIdIndexRoute
+  '/stores/$storeId/branches/create': typeof AuthenticatedStoresStoreIdBranchesCreateRoute
+  '/stores/$storeId/branches/$branchId/edit': typeof AuthenticatedStoresStoreIdBranchesBranchIdEditRoute
+  '/stores/$storeId/branches/$branchId': typeof AuthenticatedStoresStoreIdBranchesBranchIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/test': typeof AuthenticatedTestRoute
   '/admin/login': typeof AdminLoginRoute
-  '/_authenticated/stores/new': typeof AuthenticatedStoresNewRoute
+  '/_authenticated/stores/create': typeof AuthenticatedStoresCreateRoute
   '/_authenticated/stores/$storeId/edit': typeof AuthenticatedStoresStoreIdEditRoute
-  '/_authenticated/locations/$locationId/': typeof AuthenticatedLocationsLocationIdIndexRoute
   '/_authenticated/stores/$storeId/': typeof AuthenticatedStoresStoreIdIndexRoute
+  '/_authenticated/stores/$storeId/branches/create': typeof AuthenticatedStoresStoreIdBranchesCreateRoute
+  '/_authenticated/stores/$storeId/branches/$branchId/edit': typeof AuthenticatedStoresStoreIdBranchesBranchIdEditRoute
+  '/_authenticated/stores/$storeId/branches/$branchId/': typeof AuthenticatedStoresStoreIdBranchesBranchIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/test'
     | '/admin/login'
-    | '/stores/new'
+    | '/stores/create'
     | '/stores/$storeId/edit'
-    | '/locations/$locationId'
     | '/stores/$storeId'
+    | '/stores/$storeId/branches/create'
+    | '/stores/$storeId/branches/$branchId/edit'
+    | '/stores/$storeId/branches/$branchId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
+    | '/test'
     | '/admin/login'
-    | '/stores/new'
+    | '/stores/create'
     | '/stores/$storeId/edit'
-    | '/locations/$locationId'
     | '/stores/$storeId'
+    | '/stores/$storeId/branches/create'
+    | '/stores/$storeId/branches/$branchId/edit'
+    | '/stores/$storeId/branches/$branchId'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/_authenticated/dashboard'
+    | '/_authenticated/test'
     | '/admin/login'
-    | '/_authenticated/stores/new'
+    | '/_authenticated/stores/create'
     | '/_authenticated/stores/$storeId/edit'
-    | '/_authenticated/locations/$locationId/'
     | '/_authenticated/stores/$storeId/'
+    | '/_authenticated/stores/$storeId/branches/create'
+    | '/_authenticated/stores/$storeId/branches/$branchId/edit'
+    | '/_authenticated/stores/$storeId/branches/$branchId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -150,6 +189,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/test': {
+      id: '/_authenticated/test'
+      path: '/test'
+      fullPath: '/test'
+      preLoaderRoute: typeof AuthenticatedTestRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -157,11 +203,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/stores/new': {
-      id: '/_authenticated/stores/new'
-      path: '/stores/new'
-      fullPath: '/stores/new'
-      preLoaderRoute: typeof AuthenticatedStoresNewRouteImport
+    '/_authenticated/stores/create': {
+      id: '/_authenticated/stores/create'
+      path: '/stores/create'
+      fullPath: '/stores/create'
+      preLoaderRoute: typeof AuthenticatedStoresCreateRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/stores/$storeId/': {
@@ -171,13 +217,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoresStoreIdIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/locations/$locationId/': {
-      id: '/_authenticated/locations/$locationId/'
-      path: '/locations/$locationId'
-      fullPath: '/locations/$locationId'
-      preLoaderRoute: typeof AuthenticatedLocationsLocationIdIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/stores/$storeId/edit': {
       id: '/_authenticated/stores/$storeId/edit'
       path: '/stores/$storeId/edit'
@@ -185,24 +224,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoresStoreIdEditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/stores/$storeId/branches/create': {
+      id: '/_authenticated/stores/$storeId/branches/create'
+      path: '/stores/$storeId/branches/create'
+      fullPath: '/stores/$storeId/branches/create'
+      preLoaderRoute: typeof AuthenticatedStoresStoreIdBranchesCreateRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stores/$storeId/branches/$branchId/': {
+      id: '/_authenticated/stores/$storeId/branches/$branchId/'
+      path: '/stores/$storeId/branches/$branchId'
+      fullPath: '/stores/$storeId/branches/$branchId'
+      preLoaderRoute: typeof AuthenticatedStoresStoreIdBranchesBranchIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stores/$storeId/branches/$branchId/edit': {
+      id: '/_authenticated/stores/$storeId/branches/$branchId/edit'
+      path: '/stores/$storeId/branches/$branchId/edit'
+      fullPath: '/stores/$storeId/branches/$branchId/edit'
+      preLoaderRoute: typeof AuthenticatedStoresStoreIdBranchesBranchIdEditRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedStoresNewRoute: typeof AuthenticatedStoresNewRoute
+  AuthenticatedTestRoute: typeof AuthenticatedTestRoute
+  AuthenticatedStoresCreateRoute: typeof AuthenticatedStoresCreateRoute
   AuthenticatedStoresStoreIdEditRoute: typeof AuthenticatedStoresStoreIdEditRoute
-  AuthenticatedLocationsLocationIdIndexRoute: typeof AuthenticatedLocationsLocationIdIndexRoute
   AuthenticatedStoresStoreIdIndexRoute: typeof AuthenticatedStoresStoreIdIndexRoute
+  AuthenticatedStoresStoreIdBranchesCreateRoute: typeof AuthenticatedStoresStoreIdBranchesCreateRoute
+  AuthenticatedStoresStoreIdBranchesBranchIdEditRoute: typeof AuthenticatedStoresStoreIdBranchesBranchIdEditRoute
+  AuthenticatedStoresStoreIdBranchesBranchIdIndexRoute: typeof AuthenticatedStoresStoreIdBranchesBranchIdIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedStoresNewRoute: AuthenticatedStoresNewRoute,
+  AuthenticatedTestRoute: AuthenticatedTestRoute,
+  AuthenticatedStoresCreateRoute: AuthenticatedStoresCreateRoute,
   AuthenticatedStoresStoreIdEditRoute: AuthenticatedStoresStoreIdEditRoute,
-  AuthenticatedLocationsLocationIdIndexRoute:
-    AuthenticatedLocationsLocationIdIndexRoute,
   AuthenticatedStoresStoreIdIndexRoute: AuthenticatedStoresStoreIdIndexRoute,
+  AuthenticatedStoresStoreIdBranchesCreateRoute:
+    AuthenticatedStoresStoreIdBranchesCreateRoute,
+  AuthenticatedStoresStoreIdBranchesBranchIdEditRoute:
+    AuthenticatedStoresStoreIdBranchesBranchIdEditRoute,
+  AuthenticatedStoresStoreIdBranchesBranchIdIndexRoute:
+    AuthenticatedStoresStoreIdBranchesBranchIdIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

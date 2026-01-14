@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import {
-  useCanAccessLocation,
+  useCanAccessBranch,
   useCanAccessStore,
   usePermission,
 } from '@/hooks/use-permission'

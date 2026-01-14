@@ -1,56 +1,62 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 
 import { db } from '@/db'
-import type { transactionItems } from '@/db/schemas'
+import type { staff, Store } from '@/db/schemas'
 import {
+  branches,
   inventory,
-  locations,
   machines,
-  staff,
   stores,
   transactions,
+  // userScopes,
 } from '@/db/schemas'
+import { useAppSession } from '@/utils/auth/session'
 
-import type { UserScope } from './rules'
-import { DataRules, getUserScope, hasPermission } from './rules'
-import { useAppSession } from './session'
-import type { SessionUser } from './types-and-constants'
+import { Policies } from './policies'
+import type { ResourceType, UserScope } from './rules'
+import { getUserScope, hasPermission } from './rules'
+import type {
+  ParentIds,
+  Permission,
+  Role,
+  ScopeEntry,
+  SessionUser,
+} from './types-and-constants'
 
+// ============================================================================
 // TYPES
+// ============================================================================
 
-type StoreData = typeof stores.$inferSelect
-type LocationData = typeof locations.$inferSelect & {
-  store?: typeof stores.$inferSelect
-}
-type MachineData = typeof machines.$inferSelect & {
-  location: typeof locations.$inferSelect & {
-    store: typeof stores.$inferSelect
+export type { ResourceType, SessionUser, UserScope }
+
+// ============================================================================
+// ERROR CLASSES
+// ============================================================================
+
+export class PermissionError extends Error {
+  constructor(action: string) {
+    super(`Permission denied: ${action}`)
+    this.name = 'PermissionError'
   }
-}
-type InventoryData = typeof inventory.$inferSelect & {
-  machine: typeof machines.$inferSelect & {
-    location: typeof locations.$inferSelect & {
-      store: typeof stores.$inferSelect
-    }
-  }
-}
-type TransactionData = typeof transactions.$inferSelect & {
-  items: Array<typeof transactionItems.$inferSelect>
-  machine: typeof machines.$inferSelect & {
-    location: typeof locations.$inferSelect & {
-      store: typeof stores.$inferSelect
-    }
-  }
-}
-type StaffData = typeof staff.$inferSelect & {
-  roleAssignments: Array<{
-    role: { id: string; name: string; description: string | null }
-  }>
-  storeAccess: Array<{ storeId: string }>
-  locationAccess: Array<{ locationId: string }>
 }
 
-// AUTH HELPERS
+export class AccessError extends Error {
+  constructor(resourceType: ResourceType) {
+    super(`You do not have access to this ${resourceType}`)
+    this.name = 'AccessError'
+  }
+}
+
+export class NotFoundError extends Error {
+  constructor(resourceType: ResourceType, id: string) {
+    super(`${resourceType} not found: ${id}`)
+    this.name = 'NotFoundError'
+  }
+}
+
+// ============================================================================
+// SIMPLE AUTH HELPERS
+// ============================================================================
 
 export async function requireAuth(): Promise<SessionUser> {
   // eslint-disable-next-line react-hooks/rules-of-hooks -- useAppSession is a TanStack Start server function, not a React hook
@@ -68,330 +74,244 @@ export async function requireAuth(): Promise<SessionUser> {
   return user
 }
 
-// ============================================================================
-// STORE AUTHORIZATION
-// ============================================================================
-
-export async function authorizeStore(
-  action: 'stores.view' | 'stores.edit',
-  storeId: string,
-): Promise<StoreData> {
+/**
+ * Get authenticated user and their scope
+ * Throws if not authenticated
+ */
+export async function requireAuthWithScope() {
   const user = await requireAuth()
+  const scope = getUserScope(user)
+  return { user, scope }
+}
+
+/**
+ * Check if user has permission to perform action
+ * Super admin bypasses all permission checks
+ */
+export function requirePermission(user: SessionUser, action: Permission): void {
+  if (user.role === 'super_admin') return
 
   if (!hasPermission(user.permissions, action)) {
-    throw new Error(`Permission denied: ${action}`)
+    throw new PermissionError(action)
   }
+}
 
+/**
+ * Check if user has access to specific resources via scope
+ * Super admin bypasses all scope checks
+ */
+export function requireStoreAccess(scope: UserScope, store: Store): void {
+  if (!Policies.store.access(scope, store)) {
+    throw new AccessError('store')
+  }
+}
+
+export function requireBranchAccess(
+  scope: UserScope,
+  branch: typeof branches.$inferSelect,
+): void {
+  if (!Policies.branch.access(scope, branch)) {
+    throw new AccessError('branch')
+  }
+}
+
+export function requireBranchParentAccess(
+  scope: UserScope,
+  parentStore: Store,
+): void {
+  if (!Policies.branch.parentAccess(scope, parentStore)) {
+    throw new AccessError('branch')
+  }
+}
+
+export function requireMachineParentAccess(
+  scope: UserScope,
+  parentIds: ParentIds,
+): void {
+  if (!Policies.machine.parentAccess(scope, parentIds)) {
+    throw new AccessError('machine')
+  }
+}
+
+export function requireInventoryAccess(
+  scope: UserScope,
+  inventoryItem: typeof inventory.$inferSelect,
+): void {
+  if (!Policies.inventory.access(scope, inventoryItem)) {
+    throw new AccessError('inventory')
+  }
+}
+
+export function requireTransactionAccess(
+  scope: UserScope,
+  transaction: typeof transactions.$inferSelect,
+): void {
+  if (!Policies.transaction.access(scope, transaction)) {
+    throw new AccessError('transaction')
+  }
+}
+
+export function requireStaffAccess(
+  scope: UserScope,
+  staffMember: typeof staff.$inferSelect & {
+    role: Role
+    scopes: Array<ScopeEntry>
+  },
+): void {
+  if (!Policies.staff.access(scope, staffMember)) {
+    throw new AccessError('staff')
+  }
+}
+
+// ============================================================================
+// RESOURCE FETCHERS - Simple, no generics
+// ============================================================================
+
+export async function fetchStore(id: string) {
   const store = await db.query.stores.findFirst({
-    where: eq(stores.id, storeId),
+    where: eq(stores.id, id),
   })
 
   if (!store) {
-    throw new Error('Store not found')
-  }
-
-  const scope = getUserScope(user)
-
-  // Special handling: location admins can view stores they have locations in
-  if (action === 'stores.view' && scope.type === 'location') {
-    const userLocations = await db.query.locations.findMany({
-      where: and(
-        eq(locations.storeId, storeId),
-        inArray(locations.id, scope.locationIds),
-      ),
-      columns: { id: true },
-    })
-    if (userLocations.length === 0) {
-      throw new Error('You do not have access to this store')
-    }
-  } else if (!DataRules.store(scope, storeId)) {
-    throw new Error('You do not have access to this store')
+    throw new NotFoundError('store', id)
   }
 
   return store
 }
 
-// ============================================================================
-// LOCATION AUTHORIZATION
-// ============================================================================
-
-export async function authorizeLocation(
-  action: 'locations.view' | 'locations.edit' | 'locations.delete',
-  locationId: string,
-): Promise<LocationData> {
-  const user = await requireAuth()
-
-  if (!hasPermission(user.permissions, action)) {
-    throw new Error(`Permission denied: ${action}`)
-  }
-
-  const location = await db.query.locations.findFirst({
-    where: eq(locations.id, locationId),
-    with: { store: true },
+export async function fetchBranch(id: string) {
+  const branch = await db.query.branches.findFirst({
+    where: eq(branches.id, id),
   })
 
-  if (!location) {
-    throw new Error('Location not found')
+  if (!branch) {
+    throw new NotFoundError('branch', id)
   }
 
-  const scope = getUserScope(user)
-  if (
-    !DataRules.location(scope, { id: location.id, storeId: location.storeId })
-  ) {
-    throw new Error('You do not have access to this location')
-  }
-
-  return location
+  return branch
 }
 
-export async function authorizeLocationCreate(
-  storeId: string,
-): Promise<StoreData> {
-  const user = await requireAuth()
-
-  if (!hasPermission(user.permissions, 'locations.create')) {
-    throw new Error('Permission denied: locations.create')
-  }
-
-  const store = await db.query.stores.findFirst({
-    where: eq(stores.id, storeId),
-  })
-
-  if (!store) {
-    throw new Error('Store not found')
-  }
-
-  const scope = getUserScope(user)
-  if (!DataRules.store(scope, storeId)) {
-    throw new Error('You do not have access to the target store')
-  }
-
-  return store
-}
-
-// ============================================================================
-// MACHINE AUTHORIZATION
-// ============================================================================
-
-export async function authorizeMachine(
-  action: 'machines.view' | 'machines.edit' | 'machines.delete',
-  machineId: string,
-): Promise<MachineData> {
-  const user = await requireAuth()
-
-  if (!hasPermission(user.permissions, action)) {
-    throw new Error(`Permission denied: ${action}`)
-  }
-
+export async function fetchMachine(id: string) {
   const machine = await db.query.machines.findFirst({
-    where: eq(machines.id, machineId),
-    with: {
-      location: {
-        with: { store: true },
-      },
-    },
+    where: eq(machines.id, id),
   })
 
   if (!machine) {
-    throw new Error('Machine not found')
-  }
-
-  const scope = getUserScope(user)
-  if (
-    !DataRules.machine(scope, {
-      locationId: machine.location.id,
-      storeId: machine.location.storeId,
-    })
-  ) {
-    throw new Error('You do not have access to this machine')
+    throw new NotFoundError('machine', id)
   }
 
   return machine
 }
 
-export async function authorizeMachineCreate(
-  locationId: string,
-): Promise<LocationData> {
-  const user = await requireAuth()
-
-  if (!hasPermission(user.permissions, 'machines.create')) {
-    throw new Error('Permission denied: machines.create')
-  }
-
-  const location = await db.query.locations.findFirst({
-    where: eq(locations.id, locationId),
-  })
-
-  if (!location) {
-    throw new Error('Location not found')
-  }
-
-  const scope = getUserScope(user)
-  if (
-    !DataRules.location(scope, { id: location.id, storeId: location.storeId })
-  ) {
-    throw new Error('You do not have access to the target location')
-  }
-
-  return location
-}
-
-// ============================================================================
-// INVENTORY AUTHORIZATION
-// ============================================================================
-
-export async function authorizeInventory(
-  action: 'inventory.view' | 'inventory.edit' | 'inventory.restock',
-  inventoryId: string,
-): Promise<InventoryData> {
-  const user = await requireAuth()
-
-  if (!hasPermission(user.permissions, action)) {
-    throw new Error(`Permission denied: ${action}`)
-  }
-
+export async function fetchInventory(id: string) {
   const item = await db.query.inventory.findFirst({
-    where: eq(inventory.id, inventoryId),
-    with: {
-      machine: {
-        with: {
-          location: {
-            with: { store: true },
-          },
-        },
-      },
-    },
+    where: eq(inventory.id, id),
   })
 
   if (!item) {
-    throw new Error('Inventory item not found')
-  }
-
-  const scope = getUserScope(user)
-  if (
-    !DataRules.machine(scope, {
-      locationId: item.machine.location.id,
-      storeId: item.machine.location.storeId,
-    })
-  ) {
-    throw new Error('You do not have access to this inventory item')
+    throw new NotFoundError('inventory', id)
   }
 
   return item
 }
 
-// ============================================================================
-// TRANSACTION AUTHORIZATION
-// ============================================================================
-
-export async function authorizeTransaction(
-  action: 'transactions.view' | 'transactions.export',
-  transactionId: string,
-): Promise<TransactionData> {
-  const user = await requireAuth()
-
-  if (!hasPermission(user.permissions, action)) {
-    throw new Error(`Permission denied: ${action}`)
-  }
-
+export async function fetchTransaction(id: string) {
   const transaction = await db.query.transactions.findFirst({
-    where: eq(transactions.id, transactionId),
-    with: {
-      items: true,
-      machine: {
-        with: {
-          location: {
-            with: { store: true },
-          },
-        },
-      },
-    },
+    where: eq(transactions.id, id),
   })
 
   if (!transaction) {
-    throw new Error('Transaction not found')
-  }
-
-  const scope = getUserScope(user)
-  if (
-    !DataRules.machine(scope, {
-      locationId: transaction.machine.location.id,
-      storeId: transaction.machine.location.storeId,
-    })
-  ) {
-    throw new Error('You do not have access to this transaction')
+    throw new NotFoundError('transaction', id)
   }
 
   return transaction
 }
 
-// ============================================================================
-// STAFF AUTHORIZATION
-// ============================================================================
-
-export async function authorizeStaff(
-  action: 'staff.view' | 'staff.edit' | 'staff.delete',
-  targetStaffId: string,
-): Promise<StaffData> {
-  const user = await requireAuth()
-
-  if (!hasPermission(user.permissions, action)) {
-    throw new Error(`Permission denied: ${action}`)
+export async function fetchAccessibleStores(scope: UserScope) {
+  if (scope.type === 'global') {
+    return await db.query.stores.findMany({
+      columns: { id: true, name: true },
+      orderBy: (s, { asc }) => [asc(s.name)],
+    })
   }
 
-  const targetStaff = await db.query.staff.findFirst({
-    where: eq(staff.id, targetStaffId),
-    with: {
-      roleAssignments: {
-        with: { role: true },
-      },
-      storeAccess: true,
-      locationAccess: true,
-    },
-  })
-
-  if (!targetStaff) {
-    throw new Error('Staff member not found')
+  if (scope.type === 'store') {
+    return await db.query.stores.findMany({
+      where: inArray(stores.id, scope.scopes),
+      columns: { id: true, name: true },
+      orderBy: (s, { asc }) => [asc(s.name)],
+    })
   }
 
-  const scope = getUserScope(user)
-  const canAccess = await canAccessStaff(scope, targetStaffId)
-
-  if (!canAccess) {
-    throw new Error('You do not have access to this staff member')
-  }
-
-  return targetStaff
+  return []
 }
 
-// Helper to check staff access (needs DB for location → store mapping)
-async function canAccessStaff(
-  scope: UserScope,
-  targetStaffId: string,
-): Promise<boolean> {
-  if (scope.type === 'global') return true
-
-  const targetStaff = await db.query.staff.findFirst({
-    where: eq(staff.id, targetStaffId),
-    with: {
-      storeAccess: { columns: { storeId: true } },
-      locationAccess: {
-        with: {
-          location: { columns: { id: true, storeId: true } },
+export async function fetchAccessibleBranches(scope: UserScope) {
+  if (scope.type === 'global') {
+    return await db.query.branches.findMany({
+      columns: { id: true, name: true, storeId: true },
+      with: {
+        store: {
+          columns: { name: true },
         },
       },
-    },
-  })
-
-  if (!targetStaff) return false
-
-  const formattedStaff = {
-    storeAccess: targetStaff.storeAccess,
-    locationAccess: targetStaff.locationAccess.map((la) => ({
-      locationId: la.location.id,
-      storeId: la.location.storeId,
-    })),
+      orderBy: (l, { asc }) => [asc(l.name)],
+    })
   }
 
-  return DataRules.staff(scope, formattedStaff)
+  if (scope.type === 'store') {
+    return await db.query.branches.findMany({
+      where: inArray(branches.storeId, scope.scopes),
+      columns: { id: true, name: true, storeId: true },
+      with: {
+        store: {
+          columns: { name: true },
+        },
+      },
+      orderBy: (l, { asc }) => [asc(l.name)],
+    })
+  }
+
+  const locationIds = scope.scopes.map((s) => s.scopeId)
+
+  return await db.query.branches.findMany({
+    where: inArray(branches.id, locationIds),
+    columns: { id: true, name: true, storeId: true },
+    with: {
+      store: {
+        columns: { name: true },
+      },
+    },
+    orderBy: (l, { asc }) => [asc(l.name)],
+  })
 }
+
+// export async function fetchStaff(id: string) {
+//   const staffMember = await db.query.staff.findFirst({
+//     where: eq(staff.id, id),
+//     with: {
+//       roleAssignments: {
+//         with: { role: true },
+//       },
+//     },
+//   })
+
+//   if (!staffMember) {
+//     throw new NotFoundError('staff', id)
+//   }
+
+//   const scopes = await db.query.userScopes.findMany({
+//     where: eq(userScopes.staffId, id),
+//   })
+
+//   const role = staffMember.roleAssignments[0]?.role.name as Role
+
+//   return {
+//     ...staffMember,
+//     role,
+//     scopes: scopes.map((s) => ({
+//       scopeId: s.scopeId,
+//       storeId: s.storeId,
+//     })),
+//   }
+// }

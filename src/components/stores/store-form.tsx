@@ -9,20 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldLegend,
-  FieldSeparator,
-  FieldSet,
-} from '@/components/ui/field'
+import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import type { StoreFormData } from '@/db/schemas'
-import { storeFormSchema } from '@/db/schemas/stores'
+import { storeFormSchema } from '@/db/schemas'
 
 type StoreFormProps =
   | {
@@ -190,23 +180,9 @@ export function StoreForm(props: StoreFormProps) {
           )}
 
           {props.mode === 'new' && (
-            <form.Subscribe
-              selector={(state) => ({
-                canSubmit: state.canSubmit,
-                isSubmitting: state.isSubmitting,
-              })}
-              children={({
-                canSubmit,
-                isSubmitting: isSubmittingFromSubscribe,
-              }) => (
-                <Button
-                  type="submit"
-                  disabled={!canSubmit || isSubmittingFromSubscribe}
-                >
-                  {isSubmittingFromSubscribe ? '建立中...' : '建立'}
-                </Button>
-              )}
-            />
+            <Button type="submit" disabled={isSubmitting}>
+              建立
+            </Button>
           )}
         </CardFooter>
       </form>

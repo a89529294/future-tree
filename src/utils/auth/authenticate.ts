@@ -1,12 +1,13 @@
 import { createServerFn } from '@tanstack/react-start'
-import { eq } from 'drizzle-orm'
+import { eq, lt } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { staff } from '@/db/schemas'
+import { loggedInStaff, staff } from '@/db/schemas'
 import { hashPassword } from '@/utils/auth/password'
 import { useAppSession } from '@/utils/auth/session'
 
 import type { LoginUser, SessionUser } from './types-and-constants'
+import { expiresInMilliseconds } from './types-and-constants'
 
 export const loginFn = createServerFn({ method: 'POST' })
   .inputValidator((d: LoginUser) => d)
@@ -42,8 +43,7 @@ export const loginFn = createServerFn({ method: 'POST' })
             role: true,
           },
         },
-        storeAccess: true,
-        locationAccess: true,
+        scopes: true,
         permissions: true,
       },
     })
@@ -52,11 +52,11 @@ export const loginFn = createServerFn({ method: 'POST' })
       throw new Error('Impossible condition')
     }
 
-    // Determine the highest role (priority: super_admin > store_admin > location_admin > staff)
+    // Determine the highest role (priority: super_admin > store_admin > branch_admin > staff)
     const rolePriority: Record<SessionUser['role'], number> = {
       super_admin: 4,
       store_admin: 3,
-      location_admin: 2,
+      branch_admin: 2,
       staff: 1,
     }
 
@@ -73,6 +73,14 @@ export const loginFn = createServerFn({ method: 'POST' })
       'staff' as SessionUser['role'],
     )
 
+    // Determine scopeType based on role
+    const scopeType: SessionUser['scopeType'] =
+      highestRole === 'super_admin'
+        ? 'global'
+        : highestRole === 'store_admin'
+          ? 'store'
+          : 'branch'
+
     // Create a session
     const session = await useAppSession()
 
@@ -83,17 +91,28 @@ export const loginFn = createServerFn({ method: 'POST' })
         firstName: result.firstName,
         lastName: result.lastName,
         role: highestRole,
+        scopeType,
         permissions: result.permissions.map(
           (p: { permission: string }) => p.permission,
         ),
-        storeAccess: result.storeAccess.map(
-          (access: { storeId: string }) => access.storeId,
-        ),
-        locationAccess: result.locationAccess.map(
-          (access: { locationId: string }) => access.locationId,
-        ),
+        scopes:
+          scopeType === 'global'
+            ? []
+            : result.scopes.map((s) => ({
+                scopeId: s.scopeId,
+                storeId: s.storeId,
+              })),
         isActive: result.isActive,
       },
+    })
+
+    // delete all entry in loggedInStaff if exists
+    await db.delete(loggedInStaff).where(eq(loggedInStaff.staffId, result.id))
+
+    // Insert new record
+    await db.insert(loggedInStaff).values({
+      staffId: result.id,
+      expiresAt: new Date(Date.now() + expiresInMilliseconds),
     })
 
     // update last login
@@ -105,6 +124,13 @@ export const loginFn = createServerFn({ method: 'POST' })
 
 export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
   const session = await useAppSession()
+
+  if (session.data.user) {
+    await db
+      .delete(loggedInStaff)
+      .where(eq(loggedInStaff.staffId, session.data.user.id))
+  }
+
   await session.clear()
 })
 
@@ -112,7 +138,22 @@ export const fetchStaff = createServerFn({ method: 'GET' }).handler(
   async (): Promise<SessionUser | null> => {
     const session = await useAppSession()
 
+    // cookie expired or not even set yet
     if (!session.data.user) {
+      // Clear all expired entries in loggedInStaff
+      await db
+        .delete(loggedInStaff)
+        .where(lt(loggedInStaff.expiresAt, new Date()))
+      return null
+    }
+
+    const sessionRecord = await db.query.loggedInStaff.findFirst({
+      where: eq(loggedInStaff.staffId, session.data.user.id),
+    })
+
+    // If no session found in database, clear the session and return null
+    if (!sessionRecord) {
+      await session.clear()
       return null
     }
 

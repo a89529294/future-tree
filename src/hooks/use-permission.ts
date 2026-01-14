@@ -28,7 +28,7 @@ export function usePermissions(actions: Array<Permission>): boolean {
 /**
  * Check if user has ANY of the specified permissions.
  * @example
- * const canDoAnything = useAnyPermission(['stores.view', 'locations.view'])
+ * const canDoAnything = useAnyPermission(['stores.view', 'branches.view'])
  */
 export function useAnyPermission(actions: Array<Permission>): boolean {
   const user = useRequiredAuth()
@@ -39,24 +39,31 @@ export function useAnyPermission(actions: Array<Permission>): boolean {
 
 /**
  * Check if user can access a specific store.
+ * User has access if any of their scopes share the same storeId.
  * @example
  * const canAccessStore = useCanAccessStore(storeId)
  * {canAccessStore && <StoreDetails store={store} />}
  */
 export function useCanAccessStore(storeId: string): boolean {
   const user = useRequiredAuth()
-  return user.storeAccess.includes(storeId)
+  return user.scopes.some((s) => s.storeId === storeId)
 }
 
 /**
- * Check if user can access a specific location.
+ * Check if user can access a specific branch.
+ * User has access if any of their scopes share the same storeId.
  * @example
- * const canAccessLocation = useCanAccessLocation(locationId)
- * {canAccessLocation && <LocationDetails location={location} />}
+ * const canAccessBranch = useCanAccessBranch(branchId)
+ * {canAccessBranch && <BranchDetails branch={branch} />}
  */
-export function useCanAccessLocation(locationId: string): boolean {
+export function useCanAccessBranch(branchId: string): boolean {
   const user = useRequiredAuth()
-  return user.locationAccess.includes(locationId)
+  // Store-scoped users have access to all branches in their stores
+  // Branch-scoped users only have access to their assigned branches
+  if (user.scopeType === 'store') {
+    return true
+  }
+  return user.scopes.some((s) => s.scopeId === branchId)
 }
 
 // COMBINED CHECKS (Permission + Data Access)
@@ -70,23 +77,31 @@ export function useCanAccessLocation(locationId: string): boolean {
  */
 export function useCanDoOnStore(action: Permission, storeId: string): boolean {
   const user = useRequiredAuth()
-  return user.permissions.includes(action) && user.storeAccess.includes(storeId)
+  return (
+    user.permissions.includes(action) &&
+    user.scopes.some((s) => s.storeId === storeId)
+  )
 }
 
 /**
- * Check if user can perform action on a specific location.
+ * Check if user can perform action on a specific branch.
  * Combines permission check + data access check.
  * @example
- * const canEditLocation = useCanDoOnLocation('locations.edit', locationId)
- * {canEditLocation && <EditLocationButton />}
+ * const canEditBranch = useCanDoOnBranch('branches.edit', branchId)
+ * {canEditBranch && <EditBranchButton />}
  */
-export function useCanDoOnLocation(
+export function useCanDoOnBranch(
   action: Permission,
-  locationId: string,
+  branchId: string,
 ): boolean {
   const user = useRequiredAuth()
+  // Store-scoped users have access to all branches in their stores
+  // Branch-scoped users only have access to their assigned branches
+  if (user.scopeType === 'store') {
+    return user.permissions.includes(action)
+  }
   return (
     user.permissions.includes(action) &&
-    user.locationAccess.includes(locationId)
+    user.scopes.some((s) => s.scopeId === branchId)
   )
 }

@@ -3,7 +3,12 @@ export type LoginUser = {
   password: string
 }
 
-export type Role = 'super_admin' | 'store_admin' | 'location_admin' | 'staff'
+export type Role = 'super_admin' | 'store_admin' | 'branch_admin' | 'staff'
+
+export type ScopeEntry = {
+  scopeId: string
+  storeId: string
+}
 
 export type SessionUser = {
   id: string
@@ -11,14 +16,21 @@ export type SessionUser = {
   firstName: string
   lastName: string
   role: Role // Label only - for display/quick reference
+  scopeType: 'global' | 'store' | 'branch' // Determines access level
   permissions: Array<string> // Actual permissions from staff_permissions table
-  storeAccess: Array<string> // Array of store IDs
-  locationAccess: Array<string> // Array of location IDs
+  scopes: Array<ScopeEntry>
+  // scopes: Array<string> // Only populated for store/branch scoped users, for store scoped user they are store ids, for branch scoped users they are branch ids
   isActive: boolean
+  sessionId?: string // Unique identifier for this session, used to sync with loggedInStaff table
 }
 
 export type SessionState = {
   user: SessionUser
+}
+
+export type ParentIds = {
+  branchId: string
+  storeId: string
 }
 
 // Complete permission list - CRUD for all resources
@@ -29,11 +41,11 @@ export const ALL_PERMISSIONS = [
   'stores.edit',
   'stores.delete',
 
-  // Locations
-  'locations.view',
-  'locations.create',
-  'locations.edit',
-  'locations.delete',
+  // Branches
+  'branches.view',
+  'branches.create',
+  'branches.edit',
+  'branches.delete',
 
   // Machines
   'machines.view',
@@ -74,10 +86,10 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
   store_admin: [
     'stores.view',
     'stores.edit',
-    'locations.view',
-    'locations.create',
-    'locations.edit',
-    'locations.delete',
+    'branches.view',
+    'branches.create',
+    'branches.edit',
+    'branches.delete',
     'machines.view',
     'machines.create',
     'machines.edit',
@@ -94,10 +106,10 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
     'staff.edit',
     'staff.delete',
   ],
-  location_admin: [
+  branch_admin: [
     'stores.view',
-    'locations.view',
-    'locations.edit',
+    'branches.view',
+    'branches.edit',
     'machines.view',
     'machines.create',
     'machines.edit',
@@ -112,7 +124,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
   ],
   staff: [
     'stores.view',
-    'locations.view',
+    'branches.view',
     'machines.view',
     'inventory.view',
     'inventory.edit',
@@ -120,3 +132,6 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
     'transactions.view',
   ],
 }
+
+export const expiresInSeconds = 60 * 60 * 24 * 5
+export const expiresInMilliseconds = expiresInSeconds * 1000

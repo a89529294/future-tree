@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { createPool } from '@/db/config'
 import * as schema from '@/db/schemas'
 import { hashPassword } from '@/utils/auth/password'
+import { ROLE_DEFAULT_PERMISSIONS } from '@/utils/auth/types-and-constants'
 
 export const db = drizzle(createPool())
 
@@ -18,13 +19,15 @@ async function seed() {
     await db.execute(sql`SET session_replication_role = 'replica';`)
 
     // Clear tables in correct order (child tables first)
+    await db.delete(schema.transactionItems)
+    await db.delete(schema.transactions)
+    await db.delete(schema.inventory)
     await db.delete(schema.machines)
-    await db.delete(schema.staffLocationAccess)
-    await db.delete(schema.staffStoreAccess)
+    await db.delete(schema.branches)
+    await db.delete(schema.stores)
+    await db.delete(schema.userScopes)
     await db.delete(schema.staffPermissions)
     await db.delete(schema.staffRoleAssignments)
-    await db.delete(schema.locations)
-    await db.delete(schema.stores)
     await db.delete(schema.staff)
     await db.delete(schema.roles)
 
@@ -51,11 +54,11 @@ async function seed() {
       })
       .returning()
 
-    const [locationAdminRole] = await db
+    const [branchAdminRole] = await db
       .insert(schema.roles)
       .values({
-        name: 'location_admin',
-        description: 'Location administrator with access to specific locations',
+        name: 'branch_admin',
+        description: 'Branch administrator with access to specific branches',
       })
       .returning()
 
@@ -109,14 +112,26 @@ async function seed() {
       })
       .returning()
 
-    const [locationAdmin] = await db
+    const [branchAdmin] = await db
       .insert(schema.staff)
       .values({
-        email: 'location@admin.com',
+        email: 'branch@admin.com',
         passwordHash: defaultPassword,
-        firstName: 'Location',
+        firstName: 'Branch',
         lastName: 'Admin',
         phoneNumber: '+1234567893',
+        isActive: true,
+      })
+      .returning()
+
+    const [staffMember] = await db
+      .insert(schema.staff)
+      .values({
+        email: 'staff@example.com',
+        passwordHash: defaultPassword,
+        firstName: 'Regular',
+        lastName: 'Staff',
+        phoneNumber: '+1234567894',
         isActive: true,
       })
       .returning()
@@ -144,8 +159,14 @@ async function seed() {
     })
 
     await db.insert(schema.staffRoleAssignments).values({
-      staffId: locationAdmin.id,
-      roleId: locationAdminRole.id,
+      staffId: branchAdmin.id,
+      roleId: branchAdminRole.id,
+      assignedBy: superAdmin.id,
+    })
+
+    await db.insert(schema.staffRoleAssignments).values({
+      staffId: staffMember.id,
+      roleId: staffRole.id,
       assignedBy: superAdmin.id,
     })
 
@@ -173,10 +194,10 @@ async function seed() {
 
     console.log('Stores created successfully')
 
-    // 5. Create locations
-    console.log('Creating locations...')
-    const [store1Location1] = await db
-      .insert(schema.locations)
+    // 5. Create branches
+    console.log('Creating branches...')
+    const [store1Branch1] = await db
+      .insert(schema.branches)
       .values({
         storeId: store1.id,
         name: 'Main Floor',
@@ -184,17 +205,17 @@ async function seed() {
       })
       .returning()
 
-    const [store2Location1] = await db
-      .insert(schema.locations)
+    const [store2Branch1] = await db
+      .insert(schema.branches)
       .values({
         storeId: store2.id,
-        name: 'Ground Floor',
-        description: 'Ground floor vending area',
+        name: 'Main Branch',
+        description: 'Main branch vending area',
       })
       .returning()
 
-    const [store2Location2] = await db
-      .insert(schema.locations)
+    const [store2Branch2] = await db
+      .insert(schema.branches)
       .values({
         storeId: store2.id,
         name: 'Second Floor',
@@ -202,33 +223,44 @@ async function seed() {
       })
       .returning()
 
-    console.log('Locations created successfully')
+    console.log('Branches created successfully')
 
-    // 6. Grant store access
-    console.log('Granting store access...')
-    await db.insert(schema.staffStoreAccess).values({
+    // 6. Grant scopes using unified userScopes table
+    console.log('Granting user scopes...')
+
+    // Store admin 1 gets store-level scope for store 1
+    await db.insert(schema.userScopes).values({
       staffId: storeAdmin1.id,
-      storeId: store1.id,
-      grantedBy: superAdmin.id,
+      scopeType: 'store',
+      scopeId: store1.id,
+      storeId: store1.id, // For store scopes, scopeId === storeId
     })
 
-    await db.insert(schema.staffStoreAccess).values({
+    // Store admin 2 gets store-level scope for store 2
+    await db.insert(schema.userScopes).values({
       staffId: storeAdmin2.id,
+      scopeType: 'store',
+      scopeId: store2.id,
       storeId: store2.id,
-      grantedBy: superAdmin.id,
     })
 
-    console.log('Store access granted successfully')
-
-    // 7. Grant location access (location admin only has access to one location from store 2)
-    console.log('Granting location access...')
-    await db.insert(schema.staffLocationAccess).values({
-      staffId: locationAdmin.id,
-      locationId: store2Location1.id,
-      grantedBy: superAdmin.id,
+    // Branch admin gets branch-level scope for store2Branch1
+    await db.insert(schema.userScopes).values({
+      staffId: branchAdmin.id,
+      scopeType: 'branch',
+      scopeId: store2Branch1.id,
+      storeId: store2.id,
     })
 
-    console.log('Location access granted successfully')
+    // Staff member gets branch-level scope for store1Branch1
+    await db.insert(schema.userScopes).values({
+      staffId: staffMember.id,
+      scopeType: 'branch',
+      scopeId: store1Branch1.id,
+      storeId: store1.id,
+    })
+
+    console.log('User scopes granted successfully')
 
     // 8. Grant permissions based on roles
     console.log('Granting permissions...')
@@ -239,10 +271,10 @@ async function seed() {
       'stores.create',
       'stores.edit',
       'stores.delete',
-      'locations.view',
-      'locations.create',
-      'locations.edit',
-      'locations.delete',
+      'branches.view',
+      'branches.create',
+      'branches.edit',
+      'branches.delete',
       'machines.view',
       'machines.create',
       'machines.edit',
@@ -272,29 +304,7 @@ async function seed() {
     }
 
     // Store admins get store admin permissions
-    const storeAdminPermissions = [
-      'stores.view',
-      'stores.edit',
-      'locations.view',
-      'locations.create',
-      'locations.edit',
-      'locations.delete',
-      'machines.view',
-      'machines.create',
-      'machines.edit',
-      'machines.delete',
-      'inventory.view',
-      'inventory.create',
-      'inventory.edit',
-      'inventory.delete',
-      'inventory.restock',
-      'transactions.view',
-      'transactions.export',
-      'staff.view',
-      'staff.create',
-      'staff.edit',
-      'staff.delete',
-    ]
+    const storeAdminPermissions = ROLE_DEFAULT_PERMISSIONS.store_admin
 
     for (const permission of storeAdminPermissions) {
       await db.insert(schema.staffPermissions).values({
@@ -309,27 +319,23 @@ async function seed() {
       })
     }
 
-    // Location admin gets location admin permissions
-    const locationAdminPermissions = [
-      'stores.view',
-      'locations.view',
-      'locations.edit',
-      'machines.view',
-      'machines.create',
-      'machines.edit',
-      'inventory.view',
-      'inventory.create',
-      'inventory.edit',
-      'inventory.restock',
-      'transactions.view',
-      'staff.view',
-      'staff.create',
-      'staff.edit',
-    ]
+    // Branch admin gets branch admin permissions
+    const branchAdminPermissions = ROLE_DEFAULT_PERMISSIONS.branch_admin
 
-    for (const permission of locationAdminPermissions) {
+    for (const permission of branchAdminPermissions) {
       await db.insert(schema.staffPermissions).values({
-        staffId: locationAdmin.id,
+        staffId: branchAdmin.id,
+        permission,
+        grantedBy: superAdmin.id,
+      })
+    }
+
+    // Regular staff gets specific permissions
+    const staffPermissions = ROLE_DEFAULT_PERMISSIONS.staff
+
+    for (const permission of staffPermissions) {
+      await db.insert(schema.staffPermissions).values({
+        staffId: staffMember.id,
         permission,
         grantedBy: superAdmin.id,
       })
@@ -346,7 +352,8 @@ async function seed() {
       const [machine] = await db
         .insert(schema.machines)
         .values({
-          locationId: store1Location1.id,
+          branchId: store1Branch1.id,
+          storeId: store1.id, // Denormalized from branch
           thingId: `machine_${i.toString().padStart(2, '0')}`,
           displayName: `Lobby Unit ${i}`,
           status: 'offline',
@@ -361,9 +368,42 @@ async function seed() {
       const [machine] = await db
         .insert(schema.machines)
         .values({
-          locationId: store1Location1.id,
+          branchId: store1Branch1.id,
+          storeId: store1.id, // Denormalized from branch
           thingId: `machine_${i.toString().padStart(2, '0')}`,
           displayName: `2F Unit ${i - 3}`,
+          status: 'offline',
+          notes: 'V1 test machine',
+        })
+        .returning()
+      machines.push(machine)
+    }
+
+    // 2 machines in store2Branch1 (Main Branch)
+    for (let i = 6; i <= 7; i++) {
+      const [machine] = await db
+        .insert(schema.machines)
+        .values({
+          branchId: store2Branch1.id,
+          storeId: store2.id,
+          thingId: `machine_${i.toString().padStart(2, '0')}`,
+          displayName: `Main Branch Unit ${i - 5}`,
+          status: 'offline',
+          notes: 'V1 test machine',
+        })
+        .returning()
+      machines.push(machine)
+    }
+
+    // 2 machines in store2Branch2 (Second Floor)
+    for (let i = 8; i <= 9; i++) {
+      const [machine] = await db
+        .insert(schema.machines)
+        .values({
+          branchId: store2Branch2.id,
+          storeId: store2.id,
+          thingId: `machine_${i.toString().padStart(2, '0')}`,
+          displayName: `2F Unit ${i - 7}`,
           status: 'offline',
           notes: 'V1 test machine',
         })
@@ -412,6 +452,8 @@ async function seed() {
 
         await db.insert(schema.inventory).values({
           machineId: machine.id,
+          branchId: machine.branchId, // Denormalized from machine
+          storeId: machine.storeId, // Denormalized from machine
           cellNumber,
           productName: product.name,
           productDescription: product.description,
@@ -432,12 +474,15 @@ async function seed() {
       `- Store Admin 2: ${storeAdmin2.email} (manages ${store2.name})`,
     )
     console.log(
-      `- Location Admin: ${locationAdmin.email} (manages ${store2Location1.name} at ${store2.name})`,
+      `- Branch Admin: ${branchAdmin.email} (manages ${store2Branch1.name} at ${store2.name})`,
+    )
+    console.log(
+      `- Staff: ${staffMember.email} (works at ${store1Branch1.name} in ${store1.name})`,
     )
     console.log('\nStores:')
-    console.log(`- ${store1.name}: 1 location (${store1Location1.name})`)
+    console.log(`- ${store1.name}: 1 branch (${store1Branch1.name})`)
     console.log(
-      `- ${store2.name}: 2 locations (${store2Location1.name}, ${store2Location2.name})`,
+      `- ${store2.name}: 2 branches (${store2Branch1.name}, ${store2Branch2.name})`,
     )
   } catch (error) {
     console.error('Error seeding database:', error)
