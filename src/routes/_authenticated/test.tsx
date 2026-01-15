@@ -35,7 +35,12 @@ function TestPage() {
         thingId: value.thingId.trim(),
         doors: value.doors.map((door) => Number(door)),
       })
-      publishUnlock()
+      publishUnlock({
+        data: {
+          thingId: value.thingId.trim(),
+          cells: value.doors.map((door) => Number(door)),
+        },
+      })
       form.reset()
     },
   })
