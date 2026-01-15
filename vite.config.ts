@@ -19,6 +19,12 @@ const config = defineConfig({
     viteReact(),
   ],
   nitro: {},
+  build: {
+    rollupOptions: {
+      external: ['aws-crt', 'aws-iot-device-sdk-v2'],
+    },
+  },
+  server: {},
 })
 
 export default config
