@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useDeferredValue } from 'react'
 
 import { Spinner } from '@/components/ui/spinner'
-import { branchQueryOptions, useBranch } from '@/data/branches'
+import { branchQueryOptions, useBranch } from '@/queries/branches'
 import { BranchForm } from '@/routes/_authenticated/stores/$storeId/branches/-components/branch-form'
 
 export const Route = createFileRoute(
@@ -25,7 +25,7 @@ function BranchDetailComponent() {
   const { data: branch } = useBranch(deferredBranchId)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-slate-900 h-full p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">檢視據點</h1>
       </div>

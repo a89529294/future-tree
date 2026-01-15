@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
-import { createSelectSchema } from 'drizzle-zod'
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import type z from 'zod'
 
 import { stores } from './stores'
@@ -22,3 +22,15 @@ export const branches = pgTable('branches', {
 
 export const branchSchema = createSelectSchema(branches)
 export type Branch = z.infer<typeof branchSchema>
+
+export const branchFormSchema = createInsertSchema(branches, {
+  name: (schema) =>
+    schema.trim().min(1, '名稱為必填欄位').max(255, '不能高過255字'),
+  description: (schema) => schema.trim().max(1000, '不能超過1000字'),
+}).pick({
+  storeId: true,
+  name: true,
+  description: true,
+})
+
+export type BranchFormData = z.infer<typeof branchFormSchema>

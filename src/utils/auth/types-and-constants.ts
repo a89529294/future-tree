@@ -5,11 +5,6 @@ export type LoginUser = {
 
 export type Role = 'super_admin' | 'store_admin' | 'branch_admin' | 'staff'
 
-export type ScopeEntry = {
-  scopeId: string
-  storeId: string
-}
-
 export type SessionUser = {
   id: string
   email: string
@@ -18,8 +13,7 @@ export type SessionUser = {
   role: Role // Label only - for display/quick reference
   scopeType: 'global' | 'store' | 'branch' // Determines access level
   permissions: Array<string> // Actual permissions from staff_permissions table
-  scopes: Array<ScopeEntry>
-  // scopes: Array<string> // Only populated for store/branch scoped users, for store scoped user they are store ids, for branch scoped users they are branch ids
+  scopes: Array<string> // Only populated for store/branch scoped users, for store scoped user they are store ids, for branch scoped users they are branch ids
   isActive: boolean
   sessionId?: string // Unique identifier for this session, used to sync with loggedInStaff table
 }
@@ -36,41 +30,41 @@ export type ParentIds = {
 // Complete permission list - CRUD for all resources
 export const ALL_PERMISSIONS = [
   // Stores
-  'stores.view',
   'stores.create',
-  'stores.edit',
+  'stores.read',
+  'stores.update',
   'stores.delete',
 
   // Branches
-  'branches.view',
   'branches.create',
-  'branches.edit',
+  'branches.read',
+  'branches.update',
   'branches.delete',
 
   // Machines
-  'machines.view',
   'machines.create',
-  'machines.edit',
+  'machines.read',
+  'machines.update',
   'machines.delete',
 
   // Inventory
-  'inventory.view',
   'inventory.create',
-  'inventory.edit',
+  'inventory.read',
+  'inventory.update',
   'inventory.delete',
   'inventory.restock', // Special action
 
   // Transactions
-  'transactions.view',
   'transactions.create',
-  'transactions.edit',
+  'transactions.read',
+  'transactions.update',
   'transactions.delete',
   'transactions.export', // Special action
 
   // Staff
-  'staff.view',
   'staff.create',
-  'staff.edit',
+  'staff.read',
+  'staff.update',
   'staff.delete',
 ] as const
 
@@ -84,52 +78,52 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
 > = {
   super_admin: [...ALL_PERMISSIONS], // All permissions
   store_admin: [
-    'stores.view',
-    'stores.edit',
-    'branches.view',
+    'stores.read',
+    'stores.update',
+    'branches.read',
     'branches.create',
-    'branches.edit',
+    'branches.update',
     'branches.delete',
-    'machines.view',
+    'machines.read',
     'machines.create',
-    'machines.edit',
+    'machines.update',
     'machines.delete',
-    'inventory.view',
+    'inventory.read',
     'inventory.create',
-    'inventory.edit',
+    'inventory.update',
     'inventory.delete',
     'inventory.restock',
-    'transactions.view',
+    'transactions.read',
     'transactions.export',
-    'staff.view',
+    'staff.read',
     'staff.create',
-    'staff.edit',
+    'staff.update',
     'staff.delete',
   ],
   branch_admin: [
-    'stores.view',
-    'branches.view',
-    'branches.edit',
-    'machines.view',
+    'stores.read',
+    'branches.read',
+    'branches.update',
+    'machines.read',
     'machines.create',
-    'machines.edit',
-    'inventory.view',
+    'machines.update',
+    'inventory.read',
     'inventory.create',
-    'inventory.edit',
+    'inventory.update',
     'inventory.restock',
-    'transactions.view',
-    'staff.view',
+    'transactions.read',
+    'staff.read',
     'staff.create',
-    'staff.edit',
+    'staff.update',
   ],
   staff: [
-    'stores.view',
-    'branches.view',
-    'machines.view',
-    'inventory.view',
-    'inventory.edit',
+    'stores.read',
+    'branches.read',
+    'machines.read',
+    'inventory.read',
+    'inventory.update',
     'inventory.restock',
-    'transactions.view',
+    'transactions.read',
   ],
 }
 

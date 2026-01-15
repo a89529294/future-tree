@@ -1,0 +1,73 @@
+// app/functions/iot.ts
+import { fromNodeProviderChain } from '@aws-sdk/credential-providers'
+import { createServerFn } from '@tanstack/react-start'
+import { iot, mqtt } from 'aws-iot-device-sdk-v2'
+
+let connection: mqtt.MqttClientConnection | null = null
+
+// Initialize IoT connection
+async function getIoTConnection(): Promise<mqtt.MqttClientConnection> {
+  if (connection) return connection
+
+  try {
+    // Get IoT endpoint
+    const endpoint = 'a1lgre51uh3lnz-ats.iot.ap-east-1.amazonaws.com'
+
+    // Get credentials from EC2 instance role
+    const credentialsProvider = fromNodeProviderChain()
+    const credentials = await credentialsProvider()
+
+    const configBuilder =
+      iot.AwsIotMqttConnectionConfigBuilder.new_with_websockets()
+        .with_clean_session(true)
+        .with_client_id(`webapp-${Date.now()}`)
+        .with_endpoint(endpoint)
+        .with_credentials(
+          'ap-east-1',
+          credentials.accessKeyId,
+          credentials.secretAccessKey,
+          credentials.sessionToken,
+        )
+
+    const config = configBuilder.build()
+    const client = new mqtt.MqttClient()
+    connection = client.new_connection(config)
+
+    await connection.connect()
+    console.log('Connected to AWS IoT Core')
+
+    return connection
+  } catch (error) {
+    console.error('Failed to connect to IoT Core:', error)
+    throw error
+  }
+}
+
+export const publishUnlock = createServerFn({ method: 'POST' }).handler(
+  async () => {
+    try {
+      const conn = await getIoTConnection()
+
+      const payload = {
+        request_id: 'tx_001',
+        cells: [1],
+        timestamp: Date.now(),
+      }
+
+      const topic = 'cmd/basicPubSub/unlock'
+
+      await conn.publish(topic, JSON.stringify(payload), mqtt.QoS.AtLeastOnce)
+
+      console.log(`Published to ${topic}:`, payload)
+
+      return {
+        success: true,
+        message: 'Unlock command published',
+        payload,
+      }
+    } catch (error) {
+      console.error('Error publishing message:', error)
+      throw new Error(error instanceof Error ? error.message : 'Unknown error')
+    }
+  },
+)

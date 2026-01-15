@@ -95,13 +95,18 @@ export const loginFn = createServerFn({ method: 'POST' })
         permissions: result.permissions.map(
           (p: { permission: string }) => p.permission,
         ),
-        scopes:
-          scopeType === 'global'
-            ? []
-            : result.scopes.map((s) => ({
-                scopeId: s.scopeId,
-                storeId: s.storeId,
-              })),
+        scopes: (() => {
+          switch (scopeType) {
+            case 'global':
+              return []
+            case 'store':
+              return result.scopes.map((v) => v.storeId)
+            case 'branch':
+              return result.scopes.map((v) => v.scopeId)
+            default:
+              throw new Error(`Unhandled scopeType: ${scopeType}`)
+          }
+        })(),
         isActive: result.isActive,
       },
     })

@@ -266,34 +266,7 @@ async function seed() {
     console.log('Granting permissions...')
 
     // Super admin gets all permissions
-    const superAdminPermissions = [
-      'stores.view',
-      'stores.create',
-      'stores.edit',
-      'stores.delete',
-      'branches.view',
-      'branches.create',
-      'branches.edit',
-      'branches.delete',
-      'machines.view',
-      'machines.create',
-      'machines.edit',
-      'machines.delete',
-      'inventory.view',
-      'inventory.create',
-      'inventory.edit',
-      'inventory.delete',
-      'inventory.restock',
-      'transactions.view',
-      'transactions.create',
-      'transactions.edit',
-      'transactions.delete',
-      'transactions.export',
-      'staff.view',
-      'staff.create',
-      'staff.edit',
-      'staff.delete',
-    ]
+    const superAdminPermissions = ROLE_DEFAULT_PERMISSIONS.super_admin
 
     for (const permission of superAdminPermissions) {
       await db.insert(schema.staffPermissions).values({

@@ -7,7 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import type { SidebarStore } from '@/data/sidebar'
+import type { SidebarStore } from '@/queries/sidebar'
 
 import {
   SidebarGroup,

@@ -1,87 +1,150 @@
-import {
-  queryOptions,
-  useMutation,
-  useSuspenseQuery,
-} from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
+import z from 'zod'
 
-import { db } from '@/db'
-import type { StoreFormData } from '@/db/schemas'
-import { storeFormSchema, stores } from '@/db/schemas'
 import {
-  fetchStore,
-  requireAuthWithScope,
+  NotFoundError,
+  requireAccessGlobal,
+  requireAccessStore,
+  requireAuth,
   requirePermission,
-  requireStoreAccess,
-} from '@/utils/auth/authorize'
+} from '@/data/utils/authorize'
+import { withDbErrors } from '@/data/utils/db-error'
+import { db } from '@/db'
+import { stores } from '@/db/schemas'
+import { storeFormSchema } from '@/db/schemas/resources/stores'
 
-// Get store by ID - SIMPLE AND CLEAR
-const getStore = createServerFn({ method: 'GET' })
-  .inputValidator((id: string) => id)
-  .handler(async ({ data: id }) => {
-    const { user, scope } = await requireAuthWithScope()
-    requirePermission(user, 'stores.view')
-
-    const store = await fetchStore(id)
-    requireStoreAccess(scope, store)
-
-    return store
-  })
-
-// Update store - SIMPLE AND CLEAR
-const updateStore = createServerFn({ method: 'POST' })
-  .inputValidator((data: { id: string; store: StoreFormData }) => ({
-    id: data.id,
-    store: storeFormSchema.parse(data.store),
-  }))
-  .handler(async ({ data }) => {
-    const { user, scope } = await requireAuthWithScope()
-    requirePermission(user, 'stores.edit')
-
-    const store = await fetchStore(data.id)
-    requireStoreAccess(scope, store)
-
-    const [updated] = await db
-      .update(stores)
-      .set(data.store)
-      .where(eq(stores.id, data.id))
-      .returning()
-
-    return updated
-  })
-
-// Create store - SIMPLE AND CLEAR
 const createStore = createServerFn({ method: 'POST' })
   .inputValidator(storeFormSchema)
-  .handler(async ({ data }) => {
-    const { user } = await requireAuthWithScope()
-    requirePermission(user, 'stores.create')
-    // No resource check needed for create
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'stores.create')
 
-    const [newStore] = await db.insert(stores).values(data).returning()
+      requireAccessGlobal(user)
 
-    return newStore
-  })
+      const [newStore] = await db.insert(stores).values(data).returning()
 
-export const storeQueryOptions = (id: string) =>
-  queryOptions({
-    queryKey: ['stores', id],
-    queryFn: () => getStore({ data: id }),
-  })
+      return newStore
+    }),
+  )
 
-export function useStore(id: string) {
-  return useSuspenseQuery(storeQueryOptions(id))
-}
+const readStore = createServerFn()
+  .inputValidator((storeId: string) => storeId)
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'stores.read')
 
-export function useUpdateStore() {
-  return useMutation({
-    mutationFn: updateStore,
-  })
-}
+      const store = await db.query.stores.findFirst({
+        where: eq(stores.id, data),
+      })
+      if (!store) {
+        throw new NotFoundError('store', data)
+      }
 
-export function useCreateStore() {
-  return useMutation({
-    mutationFn: createStore,
-  })
+      requireAccessStore(user, store)
+
+      return store
+    }, 'Read store failed:'),
+  )
+
+const readStores = createServerFn().handler(
+  withDbErrors(async () => {
+    const user = await requireAuth()
+    requirePermission(user, 'stores.read')
+
+    if (user.scopeType === 'global') {
+      return await db.query.stores.findMany()
+    }
+
+    if (user.scopeType === 'store') {
+      return await db.query.stores.findMany({
+        where: inArray(stores.id, user.scopes),
+      })
+    }
+
+    return []
+  }, 'Read stores failed:'),
+)
+
+const updateStore = createServerFn()
+  .inputValidator(storeFormSchema.extend({ id: z.string() }))
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'stores.update')
+
+      const store = await db.query.stores.findFirst({
+        where: eq(stores.id, data.id),
+      })
+      if (!store) {
+        throw new NotFoundError('store', data.id)
+      }
+
+      requireAccessStore(user, store)
+
+      const { id, ...updateData } = data
+
+      const updatedStores = await db
+        .update(stores)
+        .set(updateData)
+        .where(eq(stores.id, id))
+        .returning()
+
+      if (updatedStores.length === 0) {
+        throw new NotFoundError('store', data.id)
+      }
+
+      return updatedStores[0]
+    }, 'Update store failed:'),
+  )
+
+const deleteStore = createServerFn({ method: 'POST' })
+  .inputValidator((storeId: string) => storeId)
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'stores.delete')
+
+      requireAccessGlobal(user)
+
+      const deletedStores = await db
+        .delete(stores)
+        .where(eq(stores.id, data))
+        .returning()
+
+      if (deletedStores.length === 0) {
+        throw new NotFoundError('store', data)
+      }
+
+      return deletedStores[0]
+    }, 'Delete store failed:'),
+  )
+
+const deleteStores = createServerFn({ method: 'POST' })
+  .inputValidator((data: { storeIds: Array<string> }) => data)
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'stores.delete')
+
+      requireAccessGlobal(user)
+
+      const deletedStores = await db
+        .delete(stores)
+        .where(inArray(stores.id, data.storeIds))
+        .returning()
+
+      return deletedStores
+    }, 'Delete stores failed:'),
+  )
+
+export {
+  createStore,
+  deleteStore,
+  deleteStores,
+  readStore,
+  readStores,
+  updateStore,
 }

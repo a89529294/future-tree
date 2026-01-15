@@ -11,8 +11,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import type { SidebarData } from '@/data/sidebar'
 import { usePermission } from '@/hooks/use-permission'
+import type { SidebarData } from '@/queries/sidebar'
 
 import { CollapsibleBranches } from './collapsible-branches'
 import { CollapsibleStores } from './collapsible-stores'
@@ -22,9 +22,9 @@ type AppSidebarProps = {
 }
 
 export function AppSidebar({ data }: AppSidebarProps) {
-  const canViewStores = usePermission('stores.view')
-  const canViewBranches = usePermission('branches.view')
-  const canViewMachines = usePermission('machines.view')
+  const canReadStores = usePermission('stores.read')
+  const canReadBranches = usePermission('branches.read')
+  const canReadMachines = usePermission('machines.read')
 
   // Group branches by store for display
   const storeMap = new Map<
@@ -50,23 +50,28 @@ export function AppSidebar({ data }: AppSidebarProps) {
 
   return (
     <Sidebar>
-      <SidebarHeader className="h-16 flex flex-row items-center px-4">
-        <img className="size-10 object-contain" src="/future-tree-logo.png" />
-        <span className="text-xl font-bold">未來樹</span>
+      <SidebarHeader className="h-16">
+        <Link
+          to="/"
+          className="h-full flex flex-row items-center cursor-pointer gap-2 "
+        >
+          <img className="size-10 object-contain" src="/future-tree-logo.png" />
+          <span className="text-xl font-bold">未來樹</span>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         {/* Stores Section */}
-        {canViewStores && data.stores.length > 0 && (
+        {canReadStores && data.stores.length > 0 && (
           <CollapsibleStores stores={data.stores} />
         )}
 
         {/* Branches Section */}
-        {canViewBranches && data.branches.length > 0 && (
+        {canReadBranches && data.branches.length > 0 && (
           <CollapsibleBranches branchesByStore={branchesByStore} />
         )}
 
         {/* Machines Section - just a link for now */}
-        {canViewMachines && (
+        {canReadMachines && (
           <SidebarGroup>
             <SidebarGroupLabel>
               <StoreIcon />

@@ -1,105 +1,181 @@
-import {
-  queryOptions,
-  useMutation,
-  useSuspenseQuery,
-} from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
+import z from 'zod'
 
-import { db } from '@/db'
-import { branches, machines } from '@/db/schemas'
-import type { MachineFormData } from '@/db/schemas/resources/machines'
-import { machineFormSchema } from '@/db/schemas/resources/machines'
 import {
-  fetchMachine,
-  requireAuthWithScope,
-  requireMachineParentAccess,
+  NotFoundError,
+  requireAccessBranch,
+  requireAuth,
   requirePermission,
-} from '@/utils/auth/authorize'
+} from '@/data/utils/authorize'
+import { withDbErrors } from '@/data/utils/db-error'
+import { db } from '@/db'
+import { branches } from '@/db/schemas'
+import { machineFormSchema, machines } from '@/db/schemas/resources/machines'
 
-// Get machine by ID - SIMPLE AND CLEAR
-const getMachine = createServerFn({ method: 'GET' })
-  .inputValidator((id: string) => id)
-  .handler(async ({ data: id }) => {
-    const { user, scope } = await requireAuthWithScope()
-    requirePermission(user, 'machines.view')
-
-    const machine = await fetchMachine(id)
-    requireMachineParentAccess(scope, machine)
-
-    return machine
-  })
-
-// Update machine - SIMPLE AND CLEAR
-const updateMachine = createServerFn({ method: 'POST' })
-  .inputValidator((data: { id: string; machine: MachineFormData }) => ({
-    id: data.id,
-    machine: machineFormSchema.parse(data.machine),
-  }))
-  .handler(async ({ data }) => {
-    const { user, scope } = await requireAuthWithScope()
-    requirePermission(user, 'machines.edit')
-
-    const machine = await fetchMachine(data.id)
-    requireMachineParentAccess(scope, machine)
-
-    const [updated] = await db
-      .update(machines)
-      .set(data.machine)
-      .where(eq(machines.id, data.id))
-      .returning()
-
-    return updated
-  })
-
-// Create machine - SIMPLE AND CLEAR
 const createMachine = createServerFn({ method: 'POST' })
   .inputValidator(machineFormSchema)
-  .handler(async ({ data }) => {
-    const { user, scope } = await requireAuthWithScope()
-    requirePermission(user, 'machines.create')
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'machines.create')
 
-    // check if branch exist
-    const branch = await db.query.branches.findFirst({
-      where: eq(branches.id, data.branchId),
-    })
-    if (!branch) {
-      throw new Error('Branch not found')
-    }
+      const branch = await db.query.branches.findFirst({
+        where: eq(branches.id, data.branchId),
+      })
+      if (!branch) {
+        throw new NotFoundError('branch', data.branchId)
+      }
 
-    // Check user has access to the parent branch
-    requireMachineParentAccess(scope, {
-      storeId: branch.storeId,
-      branchId: data.branchId,
-    })
+      requireAccessBranch(user, branch)
 
-    // Insert with denormalized storeId from branch
-    const [newMachine] = await db
-      .insert(machines)
-      .values({ ...data, storeId: branch.storeId })
-      .returning()
+      // Insert with denormalized storeId from branch
+      const [newMachine] = await db
+        .insert(machines)
+        .values({ ...data, storeId: branch.storeId })
+        .returning()
 
-    return newMachine
-  })
+      return newMachine
+    }, 'Create machine failed:'),
+  )
 
-export const machineQueryOptions = (id: string) =>
-  queryOptions({
-    queryKey: ['machines', id],
-    queryFn: () => getMachine({ data: id }),
-  })
+const readMachine = createServerFn()
+  .inputValidator((data: { machineId: string; branchId: string }) => data)
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'machines.read')
 
-export function useMachine(id: string) {
-  return useSuspenseQuery(machineQueryOptions(id))
-}
+      const branch = await db.query.branches.findFirst({
+        where: eq(branches.id, data.branchId),
+      })
+      if (!branch) {
+        throw new NotFoundError('branch', data.branchId)
+      }
 
-export function useUpdateMachine() {
-  return useMutation({
-    mutationFn: updateMachine,
-  })
-}
+      requireAccessBranch(user, branch)
 
-export function useCreateMachine() {
-  return useMutation({
-    mutationFn: createMachine,
-  })
-}
+      const foundMachine = await db.query.machines.findFirst({
+        where: eq(machines.id, data.machineId),
+      })
+
+      if (!foundMachine) throw new NotFoundError('machine', data.machineId)
+
+      return foundMachine
+    }, 'Read machine failed:'),
+  )
+
+const readMachines = createServerFn()
+  .inputValidator((branchId: string) => branchId)
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'machines.read')
+
+      const branch = await db.query.branches.findFirst({
+        where: eq(branches.id, data),
+      })
+      if (!branch) {
+        throw new NotFoundError('branch', data)
+      }
+
+      requireAccessBranch(user, branch)
+
+      return await db.query.machines.findMany({
+        where: eq(machines.branchId, data),
+      })
+    }, 'Read machines failed:'),
+  )
+
+const updateMachine = createServerFn({ method: 'POST' })
+  .inputValidator(
+    machineFormSchema.extend({
+      machineId: z.string(),
+      branchId: z.string(),
+    }),
+  )
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'machines.update')
+
+      const branch = await db.query.branches.findFirst({
+        where: eq(branches.id, data.branchId),
+      })
+      if (!branch) {
+        throw new NotFoundError('branch', data.branchId)
+      }
+
+      requireAccessBranch(user, branch)
+
+      const { machineId, branchId, ...updateData } = data
+
+      const updatedMachines = await db
+        .update(machines)
+        .set(updateData)
+        .where(eq(machines.id, machineId))
+        .returning()
+
+      if (updatedMachines.length === 0) {
+        throw new NotFoundError('machine', machineId)
+      }
+
+      return updatedMachines[0]
+    }, 'Update machine failed:'),
+  )
+
+const deleteMachine = createServerFn({ method: 'POST' })
+  .inputValidator((data: { machineId: string; branchId: string }) => data)
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'machines.delete')
+
+      const branch = await db.query.branches.findFirst({
+        where: eq(branches.id, data.branchId),
+      })
+      if (!branch) {
+        throw new NotFoundError('branch', data.branchId)
+      }
+
+      requireAccessBranch(user, branch)
+
+      const deletedMachines = await db
+        .delete(machines)
+        .where(eq(machines.id, data.machineId))
+        .returning()
+
+      if (deletedMachines.length === 0) {
+        throw new NotFoundError('machine', data.machineId)
+      }
+
+      return deletedMachines[0]
+    }, 'Delete machine failed:'),
+  )
+
+const deleteMachines = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (data: { machineIds: Array<string>; branchId: string }) => data,
+  )
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'machines.delete')
+
+      const branch = await db.query.branches.findFirst({
+        where: eq(branches.id, data.branchId),
+      })
+      if (!branch) {
+        throw new NotFoundError('branch', data.branchId)
+      }
+
+      requireAccessBranch(user, branch)
+
+      const deletedMachines = await db
+        .delete(machines)
+        .where(inArray(machines.id, data.machineIds))
+        .returning()
+
+      return deletedMachines
+    }, 'Delete machines failed:'),
+  )

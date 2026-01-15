@@ -1,111 +1,186 @@
-import {
-  queryOptions,
-  useMutation,
-  useSuspenseQuery,
-} from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
+import z from 'zod'
 
-import { db } from '@/db'
-import { branches, stores } from '@/db/schemas'
 import {
-  fetchBranch,
-  requireAuthWithScope,
-  requireBranchAccess,
-  requireBranchParentAccess,
+  NotFoundError,
+  requireAccessBranch,
+  requireAccessStore,
+  requireAuth,
   requirePermission,
-} from '@/utils/auth/authorize'
+} from '@/data/utils/authorize'
+import { withDbErrors } from '@/data/utils/db-error'
+import { db } from '@/db'
+import { stores } from '@/db/schemas'
+import { branches, branchFormSchema } from '@/db/schemas/resources/branches'
 
-export type BranchFormData = {
-  storeId: string
-  name: string
-  description: string | null
-}
-
-const branchFormSchema = {
-  parse: (data: BranchFormData) => ({
-    storeId: data.storeId,
-    name: data.name.trim(),
-    description: data.description?.trim() || null,
-  }),
-}
-
-// Get branch by ID - SIMPLE AND CLEAR
-const getBranch = createServerFn({ method: 'GET' })
-  .inputValidator((id: string) => id)
-  .handler(async ({ data: id }) => {
-    const { user, scope } = await requireAuthWithScope()
-    requirePermission(user, 'branches.view')
-
-    const branch = await fetchBranch(id)
-    requireBranchAccess(scope, branch)
-
-    return branch
-  })
-
-// Update branch - SIMPLE AND CLEAR
-const updateBranch = createServerFn({ method: 'POST' })
-  .inputValidator((data: { id: string; branch: BranchFormData }) => ({
-    id: data.id,
-    branch: branchFormSchema.parse(data.branch),
-  }))
-  .handler(async ({ data }) => {
-    const { user, scope } = await requireAuthWithScope()
-    requirePermission(user, 'branches.edit')
-
-    const branch = await fetchBranch(data.id)
-    requireBranchAccess(scope, branch)
-
-    const [updated] = await db
-      .update(branches)
-      .set(data.branch)
-      .where(eq(branches.id, data.id))
-      .returning()
-
-    return updated
-  })
-
-// Create branch - SIMPLE AND CLEAR
 const createBranch = createServerFn({ method: 'POST' })
   .inputValidator(branchFormSchema)
-  .handler(async ({ data }) => {
-    const { user, scope } = await requireAuthWithScope()
-    requirePermission(user, 'branches.create')
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'branches.create')
 
-    // check if store exist
-    const store = await db.query.stores.findFirst({
-      where: eq(stores.id, data.storeId),
-    })
-    if (!store) {
-      throw new Error('Store not found')
+      const store = await db.query.stores.findFirst({
+        where: eq(stores.id, data.storeId),
+      })
+      if (!store) {
+        throw new NotFoundError('store', data.storeId)
+      }
+
+      requireAccessStore(user, store)
+
+      const [newBranch] = await db.insert(branches).values(data).returning()
+
+      return newBranch
+    }, 'Create branch failed:'),
+  )
+
+const readBranch = createServerFn()
+  .inputValidator((branchId: string) => branchId)
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'branches.read')
+
+      const branch = await db.query.branches.findFirst({
+        where: eq(branches.id, data),
+      })
+      if (!branch) {
+        throw new NotFoundError('branch', data)
+      }
+
+      requireAccessBranch(user, branch)
+
+      return branch
+    }, 'Read branch failed:'),
+  )
+
+const readBranches = createServerFn().handler(
+  withDbErrors(async () => {
+    const user = await requireAuth()
+    requirePermission(user, 'branches.read')
+
+    if (user.scopeType === 'global') {
+      return await db.query.branches.findMany({
+        with: {
+          store: {
+            columns: { name: true },
+          },
+        },
+      })
     }
 
-    // Check user has access to the parent store
-    requireBranchParentAccess(scope, store)
+    if (user.scopeType === 'store') {
+      return await db.query.branches.findMany({
+        where: inArray(branches.storeId, user.scopes),
+        with: {
+          store: {
+            columns: { name: true },
+          },
+        },
+      })
+    }
 
-    const [newBranch] = await db.insert(branches).values(data).returning()
+    return await db.query.branches.findMany({
+      where: inArray(branches.id, user.scopes),
+      with: {
+        store: {
+          columns: { name: true },
+        },
+      },
+    })
+  }, 'Read branches failed:'),
+)
 
-    return newBranch
-  })
+const updateBranch = createServerFn({ method: 'POST' })
+  .inputValidator(
+    branchFormSchema.extend({
+      storeId: z.string(),
+      branchId: z.string(),
+    }),
+  )
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'branches.update')
 
-export const branchQueryOptions = (id: string) =>
-  queryOptions({
-    queryKey: ['branches', id],
-    queryFn: () => getBranch({ data: id }),
-  })
+      const foundBranch = await db.query.branches.findFirst({
+        where: eq(branches.id, data.branchId),
+      })
 
-export function useBranch(id: string) {
-  return useSuspenseQuery(branchQueryOptions(id))
-}
+      if (!foundBranch) throw new NotFoundError('branch', data.branchId)
 
-export function useUpdateBranch() {
-  return useMutation({
-    mutationFn: updateBranch,
-  })
-}
+      requireAccessBranch(user, foundBranch)
 
-export function useCreateBranch() {
-  return useMutation({
-    mutationFn: createBranch,
-  })
-}
+      const { branchId, storeId, ...updatedData } = data
+
+      const updatedBranches = await db
+        .update(branches)
+        .set(updatedData)
+        .where(eq(branches.id, branchId))
+        .returning()
+
+      if (updatedBranches.length === 0) {
+        throw new NotFoundError('branch', data.branchId)
+      }
+
+      return updatedBranches[0]
+    }, 'Update branch failed:'),
+  )
+
+const deleteBranch = createServerFn({ method: 'POST' })
+  .inputValidator((data: { branchId: string; storeId: string }) => data)
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'branches.delete')
+
+      const store = await db.query.stores.findFirst({
+        where: eq(stores.id, data.storeId),
+      })
+      if (!store) {
+        throw new NotFoundError('store', data.storeId)
+      }
+
+      requireAccessStore(user, store)
+
+      const deletedBranches = await db
+        .delete(branches)
+        .where(eq(branches.id, data.branchId))
+        .returning()
+
+      if (deletedBranches.length === 0) {
+        throw new NotFoundError('branch', data.branchId)
+      }
+
+      return deletedBranches[0]
+    }, 'Delete branch failed:'),
+  )
+
+const deleteBranches = createServerFn({ method: 'POST' })
+  .inputValidator((data: { branchIds: Array<string>; storeId: string }) => data)
+  .handler(
+    withDbErrors(async ({ data }) => {
+      const user = await requireAuth()
+      requirePermission(user, 'branches.delete')
+
+      const store = await db.query.stores.findFirst({
+        where: eq(stores.id, data.storeId),
+      })
+      if (!store) {
+        throw new NotFoundError('store', data.storeId)
+      }
+
+      requireAccessStore(user, store)
+
+      const deletedBranches = await db
+        .delete(branches)
+        .where(inArray(branches.id, data.branchIds))
+        .returning()
+
+      return deletedBranches
+    }, 'Delete branches failed:'),
+  )
+
+export { deleteBranch, deleteBranches, readBranch, readBranches, updateBranch }

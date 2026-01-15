@@ -4,20 +4,8 @@ import { useDeferredValue } from 'react'
 import { toast } from 'sonner'
 
 import { StoreForm } from '@/components/stores/store-form'
-import { storeQueryOptions, useStore, useUpdateStore } from '@/data/stores'
 import type { StoreFormData } from '@/db/schemas'
-
-// Mock data fetcher
-const fetchStore = async (id: string) => {
-  // Simulating an API call
-  await new Promise((resolve) => setTimeout(resolve, 100))
-  return {
-    id,
-    name: 'Main Street Bakery',
-    address: '123 Main St, Springfield, IL 62701',
-    phoneNumber: '217-555-0123',
-  }
-}
+import { storeQueryOptions, useStore, useUpdateStore } from '@/queries/stores'
 
 export const Route = createFileRoute('/_authenticated/stores/$storeId/edit')({
   loader: ({ params, context }) => {
@@ -34,7 +22,7 @@ function StoreEditComponent() {
   const { mutateAsync, isPending } = useUpdateStore()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-slate-900 p-4 h-full">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">編輯廠商</h1>
       </div>
@@ -48,7 +36,7 @@ function StoreEditComponent() {
               {
                 data: {
                   id: storeId,
-                  store,
+                  ...store,
                 },
               },
               {

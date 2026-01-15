@@ -3,7 +3,7 @@ import { useDeferredValue } from 'react'
 
 import { StoreForm } from '@/components/stores/store-form'
 import { Spinner } from '@/components/ui/spinner'
-import { storeQueryOptions, useStore } from '@/data/stores'
+import { storeQueryOptions, useStore } from '@/queries/stores'
 
 export const Route = createFileRoute('/_authenticated/stores/$storeId/')({
   loader: ({ params, context }) => {
@@ -23,7 +23,7 @@ function StoreDetailComponent() {
   const { data: store } = useStore(deferredStoreId)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-slate-900 p-4 h-full">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">檢視廠商</h1>
       </div>
