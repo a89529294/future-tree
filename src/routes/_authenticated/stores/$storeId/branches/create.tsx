@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
-import { useCreateBranch } from '@/data/branches'
+import { useCreateBranch } from '@/queries/branches'
 
 import { BranchForm } from './-components/branch-form'
 

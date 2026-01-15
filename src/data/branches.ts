@@ -183,4 +183,11 @@ const deleteBranches = createServerFn({ method: 'POST' })
     }, 'Delete branches failed:'),
   )
 
-export { deleteBranch, deleteBranches, readBranch, readBranches, updateBranch }
+export {
+  createBranch,
+  deleteBranch,
+  deleteBranches,
+  readBranch,
+  readBranches,
+  updateBranch,
+}

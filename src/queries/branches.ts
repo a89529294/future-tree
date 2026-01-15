@@ -1,6 +1,6 @@
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
 
-import { readBranch, readBranches, updateBranch } from '@/data/branches'
+import { createBranch, readBranch, updateBranch } from '@/data/branches'
 
 export const branchQueryOptions = (branchId: string) => ({
   queryKey: ['branches', branchId],
@@ -14,4 +14,10 @@ export const useUpdateBranch = () =>
   useMutation({
     mutationKey: ['branches', 'update'],
     mutationFn: updateBranch,
+  })
+
+export const useCreateBranch = () =>
+  useMutation({
+    mutationKey: ['branches', 'create'],
+    mutationFn: createBranch,
   })
