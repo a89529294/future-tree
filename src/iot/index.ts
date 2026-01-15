@@ -43,18 +43,19 @@ async function getIoTConnection(): Promise<mqtt.MqttClientConnection> {
   }
 }
 
-export const publishUnlock = createServerFn({ method: 'POST' }).handler(
-  async () => {
+export const publishUnlock = createServerFn({ method: 'POST' })
+  .inputValidator((data: { thingId: string; cells: Array<number> }) => data)
+  .handler(async ({ data: { cells, thingId } }) => {
     try {
       const conn = await getIoTConnection()
 
       const payload = {
         request_id: 'tx_001',
-        cells: [1],
+        cells,
         timestamp: Date.now(),
       }
 
-      const topic = 'cmd/basicPubSub/unlock'
+      const topic = `cmd/${thingId}/unlock`
 
       await conn.publish(topic, JSON.stringify(payload), mqtt.QoS.AtLeastOnce)
 
@@ -69,5 +70,4 @@ export const publishUnlock = createServerFn({ method: 'POST' }).handler(
       console.error('Error publishing message:', error)
       throw new Error(error instanceof Error ? error.message : 'Unknown error')
     }
-  },
-)
+  })

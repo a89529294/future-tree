@@ -21,6 +21,7 @@ const config = defineConfig({
   nitro: {},
   build: {
     rollupOptions: {
+      // otherwise throws an error, installed automatiaclly with aws-iot-device-sdk-v2
       external: ['aws-crt', 'aws-iot-device-sdk-v2'],
     },
   },
