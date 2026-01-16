@@ -1,7 +1,10 @@
 // app/functions/iot.ts
+
 import { fromNodeProviderChain } from '@aws-sdk/credential-providers'
 import { createServerFn } from '@tanstack/react-start'
 import { iot, mqtt } from 'aws-iot-device-sdk-v2'
+
+import { broadcastToClients } from '@/websocket-server'
 
 let connection: mqtt.MqttClientConnection | null = null
 
@@ -26,7 +29,7 @@ async function getIoTConnection(): Promise<mqtt.MqttClientConnection> {
           'ap-east-1',
           credentials.accessKeyId,
           credentials.secretAccessKey,
-          credentials.sessionToken,
+          credentials.sessionToken, // only needed because we are relying on ec2 role in production. if we use accessKeyId and secretAccessKey created in aws iam console then its not needed.
         )
 
     const config = configBuilder.build()
@@ -68,6 +71,68 @@ export const publishUnlock = createServerFn({ method: 'POST' })
       }
     } catch (error) {
       console.error('Error publishing message:', error)
+      throw new Error(error instanceof Error ? error.message : 'Unknown error')
+    }
+  })
+
+export const subscribeToDoorState = createServerFn({ method: 'POST' })
+  .inputValidator((data: { thingId: string }) => data)
+  .handler(async ({ data: { thingId } }) => {
+    try {
+      const conn = await getIoTConnection()
+
+      const topic = `state/${thingId}/door`
+
+      await conn.subscribe(
+        topic,
+        mqtt.QoS.AtLeastOnce,
+        (receivedTopic: string, payload: ArrayBuffer) => {
+          const message = new TextDecoder('utf-8').decode(payload)
+          console.log(`Received message on ${receivedTopic}:`, message)
+
+          try {
+            const data = JSON.parse(message)
+            // Handle the door state update here
+            console.log('Door state:', data)
+
+            // Broadcast to all connected WebSocket clients
+            broadcastToClients(receivedTopic, data)
+          } catch (e) {
+            console.error('Failed to parse message:', e)
+          }
+        },
+      )
+
+      console.log(`Subscribed to ${topic}`)
+
+      return {
+        success: true,
+        message: `Subscribed to ${topic}`,
+      }
+    } catch (error) {
+      console.error('Error subscribing to topic:', error)
+      throw new Error(error instanceof Error ? error.message : 'Unknown error')
+    }
+  })
+
+export const unsubscribeFromDoorState = createServerFn({ method: 'POST' })
+  .inputValidator((data: { thingId: string }) => data)
+  .handler(async ({ data: { thingId } }) => {
+    try {
+      const conn = await getIoTConnection()
+
+      const topic = `state/${thingId}/door`
+
+      await conn.unsubscribe(topic)
+
+      console.log(`Unsubscribed from ${topic}`)
+
+      return {
+        success: true,
+        message: `Unsubscribed from ${topic}`,
+      }
+    } catch (error) {
+      console.error('Error unsubscribing from topic:', error)
       throw new Error(error instanceof Error ? error.message : 'Unknown error')
     }
   })

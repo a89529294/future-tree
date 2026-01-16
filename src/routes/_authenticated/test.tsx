@@ -7,7 +7,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { publishUnlock } from '@/iot'
+import {
+  publishUnlock,
+  subscribeToDoorState,
+  unsubscribeFromDoorState,
+} from '@/iot'
 
 export const Route = createFileRoute('/_authenticated/test')({
   component: TestPage,
@@ -47,10 +51,27 @@ function TestPage() {
 
   const isSubmitting = useStore(form.store, (state) => state.isSubmitting)
 
+  const subscribeForm = useForm({
+    defaultValues: {
+      thingId: '',
+    },
+  })
+
+  // useEffect(() => {
+  //   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  //   const ws = new WebSocket(`${protocol}//${`localhost:3003`}/ws`)
+
+  //   ws.onopen = () => console.log('🔗 Connected to WebSocket')
+  //   ws.onmessage = (event) => console.log('📨 Message:', event.data)
+  //   ws.onclose = () => console.log('🚫 Disconnected')
+
+  //   return () => ws.close()
+  // }, [])
+
   return (
     <div className="p-4 space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Test Page</h1>
+        <h1 className="text-xl font-bold">Open Doors</h1>
       </div>
 
       <form
@@ -126,6 +147,69 @@ function TestPage() {
         <div className="flex justify-end">
           <Button type="submit" disabled={isSubmitting}>
             Submit
+          </Button>
+        </div>
+      </form>
+
+      <div className="space-y-2">
+        <h2 className="text-xl font-bold">Subscribe/Unsubscribe</h2>
+      </div>
+
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+        }}
+        className="space-y-4 max-w-md"
+      >
+        <subscribeForm.Field
+          name="thingId"
+          children={(field) => (
+            <Field className="space-y-1">
+              <FieldLabel htmlFor={field.name}>thingId</FieldLabel>
+              <Input
+                id={field.name}
+                name={field.name}
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+              />
+            </Field>
+          )}
+        />
+
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            onClick={async () => {
+              const thingId = subscribeForm.state.values.thingId
+              if (thingId) {
+                await subscribeToDoorState({ data: { thingId } })
+
+                const protocol =
+                  window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+                const host =
+                  window.location.host.split(':').length > 1
+                    ? window.location.host.split(':')[0]
+                    : window.location.host
+                const ws = new WebSocket(`${protocol}//${host}/ws`)
+
+                ws.onopen = () => console.log('🔗 Connected to WebSocket')
+                ws.onmessage = (event) => console.log('📨 Message:', event.data)
+                ws.onclose = () => console.log('🚫 Disconnected')
+              }
+            }}
+          >
+            Subscribe
+          </Button>
+          <Button
+            type="button"
+            onClick={async () => {
+              const thingId = subscribeForm.state.values.thingId
+              if (thingId) {
+                await unsubscribeFromDoorState({ data: { thingId } })
+              }
+            }}
+          >
+            Unsubscribe
           </Button>
         </div>
       </form>
