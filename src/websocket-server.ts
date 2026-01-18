@@ -19,7 +19,7 @@ function initWebSocketServer() {
 
   wss = new WebSocketServer({
     port: 3003,
-    host: 'localhost',
+    host: '127.0.0.1',
     path: '/ws',
   })
 

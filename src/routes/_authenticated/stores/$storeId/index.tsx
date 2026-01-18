@@ -1,20 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useDeferredValue } from 'react'
 
+import { PendingComponent } from '@/components/pending-component'
+import { ResourceErrorComponent } from '@/components/resource-error-component'
 import { StoreForm } from '@/components/stores/store-form'
-import { Spinner } from '@/components/ui/spinner'
-import { storeQueryOptions, useStore } from '@/queries/stores'
+import { useStore } from '@/queries/stores'
 
 export const Route = createFileRoute('/_authenticated/stores/$storeId/')({
-  loader: ({ params, context }) => {
-    context.queryClient.ensureQueryData(storeQueryOptions(params.storeId))
-  },
   component: StoreDetailComponent,
-  pendingComponent: () => (
-    <div className="h-full grid place-items-center">
-      <Spinner className="size-8" />
-    </div>
-  ),
+  pendingComponent: PendingComponent,
+  errorComponent: ResourceErrorComponent,
 })
 
 function StoreDetailComponent() {

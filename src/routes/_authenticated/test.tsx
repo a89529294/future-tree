@@ -188,7 +188,7 @@ function TestPage() {
                   window.location.protocol === 'https:' ? 'wss:' : 'ws:'
                 const host =
                   window.location.host.split(':').length > 1
-                    ? window.location.host.split(':')[0]
+                    ? `${window.location.host.split(':')[0]}:3003`
                     : window.location.host
                 const ws = new WebSocket(`${protocol}//${host}/ws`)
 

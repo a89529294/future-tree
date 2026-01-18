@@ -4,7 +4,6 @@ import type { FormEvent } from 'react'
 import { AppSidebar } from '@/components/app-sidebar'
 import { Button } from '@/components/ui/button'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { fetchSidebarDataOptions, useSidebarData } from '@/queries/sidebar'
 import { logoutFn } from '@/utils/auth/authenticate'
 
 export const Route = createFileRoute('/_authenticated')({
@@ -15,17 +14,10 @@ export const Route = createFileRoute('/_authenticated')({
       })
     }
   },
-  loader: async ({ context }) => {
-    const sidebarData = await context.queryClient.ensureQueryData(
-      fetchSidebarDataOptions,
-    )
-    return { sidebarData }
-  },
   component: AuthenticatedLayout,
 })
 
 function AuthenticatedLayout() {
-  const sidebarData = useSidebarData()
   const { user } = Route.useRouteContext()
   const navigate = Route.useNavigate()
 
@@ -37,7 +29,8 @@ function AuthenticatedLayout() {
 
   return (
     <SidebarProvider>
-      <AppSidebar data={sidebarData.data} />
+      <AppSidebar />
+
       <main className="flex-1 flex flex-col">
         <div className="flex items-center justify-between border-b h-16 px-4">
           <SidebarTrigger />

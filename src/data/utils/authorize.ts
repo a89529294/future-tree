@@ -28,7 +28,7 @@ export class AccessError extends Error {
 
 export class NotFoundError extends Error {
   constructor(resourceType: ResourceType, id: string) {
-    super(`${resourceType} not found: ${id}`)
+    super(`${resourceType} with id ${id} cannot be found`)
     this.name = 'NotFoundError'
   }
 }

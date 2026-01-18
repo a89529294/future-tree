@@ -13,6 +13,7 @@ import { withDbErrors } from '@/data/utils/db-error'
 import { db } from '@/db'
 import { stores } from '@/db/schemas'
 import { branches, branchFormSchema } from '@/db/schemas/resources/branches'
+import { withSleepInDev } from '@/utils'
 
 const createBranch = createServerFn({ method: 'POST' })
   .inputValidator(branchFormSchema)
@@ -57,40 +58,43 @@ const readBranch = createServerFn()
   )
 
 const readBranches = createServerFn().handler(
-  withDbErrors(async () => {
-    const user = await requireAuth()
-    requirePermission(user, 'branches.read')
+  withDbErrors(
+    withSleepInDev(async () => {
+      const user = await requireAuth()
+      requirePermission(user, 'branches.read')
 
-    if (user.scopeType === 'global') {
+      if (user.scopeType === 'global') {
+        return await db.query.branches.findMany({
+          with: {
+            store: {
+              columns: { name: true },
+            },
+          },
+        })
+      }
+
+      if (user.scopeType === 'store') {
+        return await db.query.branches.findMany({
+          where: inArray(branches.storeId, user.scopes),
+          with: {
+            store: {
+              columns: { name: true },
+            },
+          },
+        })
+      }
+
       return await db.query.branches.findMany({
+        where: inArray(branches.id, user.scopes),
         with: {
           store: {
             columns: { name: true },
           },
         },
       })
-    }
-
-    if (user.scopeType === 'store') {
-      return await db.query.branches.findMany({
-        where: inArray(branches.storeId, user.scopes),
-        with: {
-          store: {
-            columns: { name: true },
-          },
-        },
-      })
-    }
-
-    return await db.query.branches.findMany({
-      where: inArray(branches.id, user.scopes),
-      with: {
-        store: {
-          columns: { name: true },
-        },
-      },
-    })
-  }, 'Read branches failed:'),
+    }),
+    'Read branches failed:',
+  ),
 )
 
 const updateBranch = createServerFn({ method: 'POST' })

@@ -3,23 +3,27 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useDeferredValue } from 'react'
 import { toast } from 'sonner'
 
+import { PendingComponent } from '@/components/pending-component'
+import { ResourceErrorComponent } from '@/components/resource-error-component'
 import { StoreForm } from '@/components/stores/store-form'
 import type { StoreFormData } from '@/db/schemas'
-import { storeQueryOptions, useStore, useUpdateStore } from '@/queries/stores'
+import { useDeleleStore, useStore, useUpdateStore } from '@/queries/stores'
 
 export const Route = createFileRoute('/_authenticated/stores/$storeId/edit')({
-  loader: ({ params, context }) => {
-    context.queryClient.ensureQueryData(storeQueryOptions(params.storeId))
-  },
   component: StoreEditComponent,
+  pendingComponent: PendingComponent,
+  errorComponent: ResourceErrorComponent,
 })
 
 function StoreEditComponent() {
   const queryClient = useQueryClient()
   const { storeId } = Route.useParams()
   const deferredStoreId = useDeferredValue(storeId)
-  const { data: initialData } = useStore(deferredStoreId)
-  const { mutateAsync, isPending } = useUpdateStore()
+  const { data: initialData, error } = useStore(deferredStoreId)
+  const { mutate, isPending } = useUpdateStore()
+  const { mutate: deleteStore } = useDeleleStore()
+
+  console.log(error)
 
   return (
     <div className="space-y-6 bg-slate-900 p-4 h-full">
@@ -31,8 +35,8 @@ function StoreEditComponent() {
           initialData={initialData}
           mode={'edit'}
           storeId={storeId}
-          onSubmit={async (store: StoreFormData) =>
-            mutateAsync(
+          onSubmit={(store: StoreFormData) =>
+            mutate(
               {
                 data: {
                   id: storeId,
@@ -46,7 +50,7 @@ function StoreEditComponent() {
                     queryKey: ['stores', storeId],
                   })
                   queryClient.invalidateQueries({
-                    queryKey: ['sidebar'],
+                    queryKey: ['stores'],
                   })
                 },
                 onError({ message }) {
@@ -55,6 +59,7 @@ function StoreEditComponent() {
               },
             )
           }
+          onDelete={() => deleteStore({ data: storeId })}
         />
       </div>
     </div>

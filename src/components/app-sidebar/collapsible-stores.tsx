@@ -1,13 +1,13 @@
-import { Link, useLocation, useMatchRoute } from '@tanstack/react-router'
-import { Building2, ChevronDown, PlusIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Link, useMatchRoute } from '@tanstack/react-router'
+import { Building2, ChevronRight, Loader2, PlusIcon } from 'lucide-react'
+import { useRef, useState } from 'react'
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import type { SidebarStore } from '@/queries/sidebar'
+import { useStores } from '@/queries/stores'
 
 import {
   SidebarGroup,
@@ -18,7 +18,8 @@ import {
   SidebarMenuItem,
 } from '../ui/sidebar'
 
-export function CollapsibleStores({ stores }: { stores: Array<SidebarStore> }) {
+export function CollapsibleStores() {
+  const { data: stores } = useStores()
   const matchRoute = useMatchRoute()
   const matchViewRoute = matchRoute({
     to: '/stores/$storeId',
@@ -48,7 +49,7 @@ export function CollapsibleStores({ stores }: { stores: Array<SidebarStore> }) {
           <CollapsibleTrigger>
             <Building2 className="mr-2 h-4 w-4" />
             廠商
-            <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+            <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:-rotate-90" />
           </CollapsibleTrigger>
         </SidebarGroupLabel>
         <CollapsibleContent>
@@ -68,6 +69,7 @@ export function CollapsibleStores({ stores }: { stores: Array<SidebarStore> }) {
                     <Link
                       to={'/stores/$storeId'}
                       params={{ storeId: store.id }}
+                      preload={false}
                     >
                       <span>{store.name}</span>
                     </Link>
@@ -84,6 +86,22 @@ export function CollapsibleStores({ stores }: { stores: Array<SidebarStore> }) {
             </SidebarMenu>
           </SidebarGroupContent>
         </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
+  )
+}
+
+export function CollapsibleStoresFallback() {
+  return (
+    <Collapsible open={false} className="group/collapsible opacity-50">
+      <SidebarGroup>
+        <SidebarGroupLabel asChild className="text-sm">
+          <CollapsibleTrigger>
+            <Building2 className="mr-2 h-4 w-4" />
+            廠商
+            <Loader2 className="ml-auto h-4 w-4 animate-spin" />
+          </CollapsibleTrigger>
+        </SidebarGroupLabel>
       </SidebarGroup>
     </Collapsible>
   )

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import type { BranchFormData } from '@/data/branches'
+import type { BranchFormData } from '@/db/schemas/resources/branches'
 
 type BranchFormProps =
   | {

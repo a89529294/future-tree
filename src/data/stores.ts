@@ -13,59 +13,68 @@ import { withDbErrors } from '@/data/utils/db-error'
 import { db } from '@/db'
 import { stores } from '@/db/schemas'
 import { storeFormSchema } from '@/db/schemas/resources/stores'
+import { withSleepInDev } from '@/utils'
 
 const createStore = createServerFn({ method: 'POST' })
   .inputValidator(storeFormSchema)
   .handler(
-    withDbErrors(async ({ data }) => {
-      const user = await requireAuth()
-      requirePermission(user, 'stores.create')
+    withDbErrors(
+      withSleepInDev(async ({ data }) => {
+        const user = await requireAuth()
+        requirePermission(user, 'stores.create')
 
-      requireAccessGlobal(user)
+        requireAccessGlobal(user)
 
-      const [newStore] = await db.insert(stores).values(data).returning()
+        const [newStore] = await db.insert(stores).values(data).returning()
 
-      return newStore
-    }),
+        return newStore
+      }),
+    ),
   )
 
 const readStore = createServerFn()
   .inputValidator((storeId: string) => storeId)
   .handler(
-    withDbErrors(async ({ data }) => {
-      const user = await requireAuth()
-      requirePermission(user, 'stores.read')
+    withDbErrors(
+      withSleepInDev(async ({ data }) => {
+        const user = await requireAuth()
+        requirePermission(user, 'stores.read')
 
-      const store = await db.query.stores.findFirst({
-        where: eq(stores.id, data),
-      })
-      if (!store) {
-        throw new NotFoundError('store', data)
-      }
+        const store = await db.query.stores.findFirst({
+          where: eq(stores.id, data),
+        })
+        if (!store) {
+          throw new NotFoundError('store', data)
+        }
 
-      requireAccessStore(user, store)
+        requireAccessStore(user, store)
 
-      return store
-    }, 'Read store failed:'),
+        return store
+      }),
+      'Read store failed:',
+    ),
   )
 
 const readStores = createServerFn().handler(
-  withDbErrors(async () => {
-    const user = await requireAuth()
-    requirePermission(user, 'stores.read')
+  withDbErrors(
+    withSleepInDev(async () => {
+      const user = await requireAuth()
+      requirePermission(user, 'stores.read')
 
-    if (user.scopeType === 'global') {
-      return await db.query.stores.findMany()
-    }
+      if (user.scopeType === 'global') {
+        return await db.query.stores.findMany()
+      }
 
-    if (user.scopeType === 'store') {
-      return await db.query.stores.findMany({
-        where: inArray(stores.id, user.scopes),
-      })
-    }
+      if (user.scopeType === 'store') {
+        return await db.query.stores.findMany({
+          where: inArray(stores.id, user.scopes),
+        })
+      }
 
-    return []
-  }, 'Read stores failed:'),
+      return []
+    }),
+    'Read stores failed:',
+  ),
 )
 
 const updateStore = createServerFn()
@@ -79,7 +88,7 @@ const updateStore = createServerFn()
         where: eq(stores.id, data.id),
       })
       if (!store) {
-        throw new NotFoundError('store', data.id)
+        throw new Error('找不到此廠商')
       }
 
       requireAccessStore(user, store)
@@ -93,7 +102,7 @@ const updateStore = createServerFn()
         .returning()
 
       if (updatedStores.length === 0) {
-        throw new NotFoundError('store', data.id)
+        throw new Error('找不到此廠商')
       }
 
       return updatedStores[0]
@@ -103,23 +112,26 @@ const updateStore = createServerFn()
 const deleteStore = createServerFn({ method: 'POST' })
   .inputValidator((storeId: string) => storeId)
   .handler(
-    withDbErrors(async ({ data }) => {
-      const user = await requireAuth()
-      requirePermission(user, 'stores.delete')
+    withDbErrors(
+      withSleepInDev(async ({ data }) => {
+        const user = await requireAuth()
+        requirePermission(user, 'stores.delete')
 
-      requireAccessGlobal(user)
+        requireAccessGlobal(user)
 
-      const deletedStores = await db
-        .delete(stores)
-        .where(eq(stores.id, data))
-        .returning()
+        const deletedStores = await db
+          .delete(stores)
+          .where(eq(stores.id, data))
+          .returning()
 
-      if (deletedStores.length === 0) {
-        throw new NotFoundError('store', data)
-      }
+        if (deletedStores.length === 0) {
+          throw new Error('找不到此廠商')
+        }
 
-      return deletedStores[0]
-    }, 'Delete store failed:'),
+        return deletedStores[0]
+      }),
+      'Delete store failed:',
+    ),
   )
 
 const deleteStores = createServerFn({ method: 'POST' })

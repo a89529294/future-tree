@@ -1,27 +1,18 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useDeferredValue } from 'react'
 
-import { Spinner } from '@/components/ui/spinner'
-import {
-  branchQueryOptions,
-  useBranch,
-  useUpdateBranch,
-} from '@/queries/branches'
+import { PendingComponent } from '@/components/pending-component'
+import { ResourceErrorComponent } from '@/components/resource-error-component'
+import { useBranch, useUpdateBranch } from '@/queries/branches'
 
 import { BranchForm } from '../-components/branch-form'
 
 export const Route = createFileRoute(
   '/_authenticated/stores/$storeId/branches/$branchId/edit',
 )({
-  loader: ({ params, context }) => {
-    context.queryClient.ensureQueryData(branchQueryOptions(params.branchId))
-  },
   component: BranchEditComponent,
-  pendingComponent: () => (
-    <div className="h-full grid place-items-center">
-      <Spinner className="size-8" />
-    </div>
-  ),
+  pendingComponent: PendingComponent,
+  errorComponent: ResourceErrorComponent,
 })
 
 function BranchEditComponent() {

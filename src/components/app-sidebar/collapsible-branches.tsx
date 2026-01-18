@@ -1,5 +1,5 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { ChevronRight, MapPin, PlusIcon } from 'lucide-react'
+import { ChevronRight, Loader2, MapPin, PlusIcon } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import {
@@ -8,6 +8,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
+import { useBranches } from '@/queries/branches'
 
 import {
   SidebarGroup,
@@ -22,22 +23,36 @@ import {
   SidebarMenuSubItem,
 } from '../ui/sidebar'
 
-export function CollapsibleBranches({
-  branchesByStore,
-}: {
-  branchesByStore: Record<
+export function CollapsibleBranches() {
+  const { data: branches } = useBranches()
+
+  // Group branches by store for display
+  const storeMap = new Map<
     string,
-    { storeName: string; branches: Array<{ id: string; name: string }> }
-  >
-}) {
+    { storeName: string; branches: typeof branches }
+  >()
+
+  branches.forEach((branch) => {
+    const storeKey = branch.storeId
+    const existing = storeMap.get(storeKey)
+
+    if (existing) {
+      existing.branches.push(branch)
+    } else {
+      storeMap.set(storeKey, {
+        storeName: branch.store.name,
+        branches: [branch],
+      })
+    }
+  })
+
+  const branchesByStore = Object.fromEntries(storeMap)
+
   const matchRoute = useMatchRoute()
   const matchBranchRoute = matchRoute({
     to: '/stores/$storeId/branches/$branchId',
     fuzzy: true,
   })
-  // const matchEditBranchRoute = matchRoute({
-  //   to: '/stores/$storeId/branches/$branchId/edit',
-  // })
   const matchCreateBranchRoute = matchRoute({
     to: '/stores/$storeId/branches/create',
   })
@@ -69,12 +84,13 @@ export function CollapsibleBranches({
           <SidebarGroupContent>
             <SidebarMenu>
               {Object.entries(branchesByStore).map(
-                ([storeId, { storeName, branches }]) => {
+                ([storeId, { storeName, branches: storeBranches }]) => {
                   return (
                     <SubCollapsible
+                      key={storeId}
                       storeId={storeId}
                       storeName={storeName}
-                      branches={branches}
+                      branches={storeBranches}
                     />
                   )
                 },
@@ -87,10 +103,26 @@ export function CollapsibleBranches({
   )
 }
 
+export function CollapsibleBranchesFallback() {
+  return (
+    <Collapsible open={false} className="group/collapsible opacity-50">
+      <SidebarGroup>
+        <SidebarGroupLabel asChild className="text-sm">
+          <CollapsibleTrigger>
+            <MapPin className="mr-2 h-4 w-4" />
+            據點
+            <Loader2 className="ml-auto h-4 w-4 animate-spin" />
+          </CollapsibleTrigger>
+        </SidebarGroupLabel>
+      </SidebarGroup>
+    </Collapsible>
+  )
+}
+
 function SubCollapsible({
   storeId,
   storeName,
-  branches,
+  branches: storeBranches,
 }: {
   storeId: string
   storeName: string
@@ -135,7 +167,7 @@ function SubCollapsible({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <SidebarMenuSub>
-            {branches.map((branch) => (
+            {storeBranches.map((branch) => (
               <SidebarMenuSubItem key={branch.id}>
                 <SidebarMenuSubButton
                   asChild

@@ -22,19 +22,19 @@ function StoreNewComponent() {
       <StoreForm
         mode="new"
         onSubmit={(store: StoreFormData) =>
-          createStore.mutateAsync(
+          createStore.mutate(
             { data: store },
             {
               onSuccess({ name, id }) {
-                toast.success(`編輯 ${name} 成功`)
-                queryClient.invalidateQueries({ queryKey: ['sidebar'] })
+                toast.success(`建立 ${name} 成功`)
+                queryClient.invalidateQueries({ queryKey: ['stores'] })
                 navigate({
                   to: '/stores/$storeId',
                   params: { storeId: id },
                 })
               },
               onError({ message }) {
-                toast.error(`編輯失敗 ${message}`)
+                toast.error(`建立失敗 ${message}`)
               },
             },
           )

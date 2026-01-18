@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { StoreIcon } from 'lucide-react'
+import { Suspense } from 'react'
 
 import {
   Sidebar,
@@ -12,41 +13,20 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { usePermission } from '@/hooks/use-permission'
-import type { SidebarData } from '@/queries/sidebar'
 
-import { CollapsibleBranches } from './collapsible-branches'
-import { CollapsibleStores } from './collapsible-stores'
+import {
+  CollapsibleBranches,
+  CollapsibleBranchesFallback,
+} from './collapsible-branches'
+import {
+  CollapsibleStores,
+  CollapsibleStoresFallback,
+} from './collapsible-stores'
 
-type AppSidebarProps = {
-  data: SidebarData
-}
-
-export function AppSidebar({ data }: AppSidebarProps) {
+export function AppSidebar() {
   const canReadStores = usePermission('stores.read')
   const canReadBranches = usePermission('branches.read')
   const canReadMachines = usePermission('machines.read')
-
-  // Group branches by store for display
-  const storeMap = new Map<
-    string,
-    { storeName: string; branches: typeof data.branches }
-  >()
-
-  data.branches.forEach((branch) => {
-    const storeKey = branch.storeId
-    const existing = storeMap.get(storeKey)
-
-    if (existing) {
-      existing.branches.push(branch)
-    } else {
-      storeMap.set(storeKey, {
-        storeName: branch.storeName,
-        branches: [branch],
-      })
-    }
-  })
-
-  const branchesByStore = Object.fromEntries(storeMap)
 
   return (
     <Sidebar>
@@ -61,13 +41,17 @@ export function AppSidebar({ data }: AppSidebarProps) {
       </SidebarHeader>
       <SidebarContent>
         {/* Stores Section */}
-        {canReadStores && data.stores.length > 0 && (
-          <CollapsibleStores stores={data.stores} />
+        {canReadStores && (
+          <Suspense fallback={<CollapsibleStoresFallback />}>
+            <CollapsibleStores />
+          </Suspense>
         )}
 
         {/* Branches Section */}
-        {canReadBranches && data.branches.length > 0 && (
-          <CollapsibleBranches branchesByStore={branchesByStore} />
+        {canReadBranches && (
+          <Suspense fallback={<CollapsibleBranchesFallback />}>
+            <CollapsibleBranches />
+          </Suspense>
         )}
 
         {/* Machines Section - just a link for now */}

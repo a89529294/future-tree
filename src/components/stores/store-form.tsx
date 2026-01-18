@@ -1,6 +1,17 @@
 import { useForm, useStore } from '@tanstack/react-form'
 import { Link } from '@tanstack/react-router'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -18,7 +29,7 @@ type StoreFormProps =
   | {
       mode: 'new'
       initialData?: never
-      onSubmit: (store: StoreFormData) => Promise<StoreFormData>
+      onSubmit: (store: StoreFormData) => void
     }
   | {
       mode: 'view'
@@ -29,7 +40,8 @@ type StoreFormProps =
       mode: 'edit'
       initialData: StoreFormData
       storeId: string
-      onSubmit: (store: StoreFormData) => Promise<StoreFormData>
+      onSubmit: (store: StoreFormData) => void
+      onDelete: () => void
     }
 
 export function StoreForm(props: StoreFormProps) {
@@ -40,9 +52,9 @@ export function StoreForm(props: StoreFormProps) {
     validators: {
       onSubmit: storeFormSchema,
     },
-    onSubmit: async ({ value }) => {
+    onSubmit: ({ value }) => {
       if (!isViewMode) {
-        await props.onSubmit({
+        props.onSubmit({
           name: value.name.trim(),
           address: value.address?.trim() || null,
           phoneNumber: value.phoneNumber?.trim() || null,
@@ -150,10 +162,11 @@ export function StoreForm(props: StoreFormProps) {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
+        <CardFooter className="flex gap-2">
           {props.mode === 'view' && (
             <Button asChild>
               <Link
+                className="ml-auto"
                 to="/stores/$storeId/edit"
                 params={{ storeId: props.storeId }}
               >
@@ -164,7 +177,32 @@ export function StoreForm(props: StoreFormProps) {
 
           {props.mode === 'edit' && (
             <>
-              <Button variant="outline" asChild>
+              <AlertDialog>
+                <AlertDialogTrigger>
+                  <Button type="button" variant={'destructive'}>
+                    刪除
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete
+                      your account and remove your data from our servers.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={props.onDelete}>
+                      Continue
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <Button className="ml-auto" variant="outline" asChild>
                 <Link
                   disabled={isSubmitting}
                   to="/stores/$storeId"
@@ -180,7 +218,7 @@ export function StoreForm(props: StoreFormProps) {
           )}
 
           {props.mode === 'new' && (
-            <Button type="submit" disabled={isSubmitting}>
+            <Button className="ml-auto" type="submit" disabled={isSubmitting}>
               建立
             </Button>
           )}
