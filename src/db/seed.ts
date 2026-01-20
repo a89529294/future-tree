@@ -242,36 +242,53 @@ async function seed() {
     // Store admin 1 gets store-level scope for store 1
     await db.insert(schema.userScopes).values({
       staffId: storeAdmin1.id,
-      scopeType: 'store',
-      scopeNumber: store1.storeNumber,
-      storeNumber: store1.storeNumber,
+      storeId: store1.id,
     })
 
     // Store admin 2 gets store-level scope for store 2
     await db.insert(schema.userScopes).values({
       staffId: storeAdmin2.id,
-      scopeType: 'store',
-      scopeNumber: store2.storeNumber,
-      storeNumber: store2.storeNumber,
+      storeId: store2.id,
     })
 
     // Branch admin gets branch-level scope for store2Branch1
     await db.insert(schema.userScopes).values({
       staffId: branchAdmin.id,
-      scopeType: 'branch',
-      scopeNumber: store2Branch1.branchNumber,
-      storeNumber: store2Branch1.storeNumber,
+      storeId: store2.id,
+      branchId: store2Branch1.id,
     })
 
     // Staff member gets branch-level scope for store1Branch1
     await db.insert(schema.userScopes).values({
       staffId: staffMember.id,
-      scopeType: 'branch',
-      scopeNumber: store1Branch1.branchNumber,
-      storeNumber: store1Branch1.storeNumber,
+      storeId: store1.id,
+      branchId: store1Branch1.id,
     })
 
     console.log('User scopes granted successfully')
+
+    // 7. Track admin assignments (one admin per store/branch)
+    console.log('Tracking admin assignments...')
+
+    // Store admin 1 is admin for store 1
+    await db.insert(schema.storeAdmins).values({
+      storeId: store1.id,
+      staffId: storeAdmin1.id,
+    })
+
+    // Store admin 2 is admin for store 2
+    await db.insert(schema.storeAdmins).values({
+      storeId: store2.id,
+      staffId: storeAdmin2.id,
+    })
+
+    // Branch admin is admin for store2Branch1
+    await db.insert(schema.branchAdmins).values({
+      branchId: store2Branch1.id,
+      staffId: branchAdmin.id,
+    })
+
+    console.log('Admin assignments tracked successfully')
 
     // 8. Grant permissions based on roles
     console.log('Granting permissions...')

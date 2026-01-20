@@ -1,17 +1,14 @@
-import { pgTable, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
+import { pgTable, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 
+import { branches } from '@/db/schemas/resources/branches'
 import { stores } from '@/db/schemas/resources/stores'
 
-import { scopeTypeEnum } from './enums'
 import { staff } from './staff'
 
-// User Scopes - Unified access control table
-// CONSTRAINTS (enforced at application level):
-//   - A store can only have ONE store_admin
-//   - A store_admin can own multiple stores
-//   - A branch can only have ONE branch_admin
-//   - A branch_admin's branches must all belong to the SAME store
-//   - A staff member can only belong to ONE branch
+// A staff can have multiple scopes (multiple stores or branches)
+// - store_admin: Multiple rows with storeId, branchId is null
+// - branch_admin/staff: Multiple rows with branchId, storeId is required
+// - super_admin: No rows in this table
 export const userScopes = pgTable(
   'user_scopes',
   {
@@ -19,14 +16,19 @@ export const userScopes = pgTable(
     staffId: uuid('staff_id')
       .references(() => staff.id, { onDelete: 'cascade' })
       .notNull(),
-    scopeType: scopeTypeEnum('scope_type').notNull(), // 'store' | 'branch'
-    scopeNumber: varchar('scope_number').notNull(), // The actual store/branch number
-    storeNumber: varchar('store_number')
+    storeId: uuid('store_id')
       .references(() => stores.id, { onDelete: 'cascade' })
-      .notNull(), // Denormalized - always the store number
+      .notNull(), // FK to stores.id (UUID)
+    branchId: uuid('branch_id').references(() => branches.id, {
+      onDelete: 'cascade',
+    }), // Optional - only for branch-scoped
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
-  (table) => [unique('user_scopes_staff_id_unique').on(table.staffId)],
+  (table) => [
+    // Prevent duplicate scopes for the same staff
+    unique('user_scopes_staff_id_store_id').on(table.staffId, table.storeId),
+    unique('user_scopes_staff_id_branch_id').on(table.staffId, table.branchId),
+  ],
 )

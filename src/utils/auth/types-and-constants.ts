@@ -13,7 +13,7 @@ export type SessionUser = {
   role: Role // Label only - for display/quick reference
   scopeType: 'global' | 'store' | 'branch' // Determines access level
   permissions: Array<string> // Actual permissions from staff_permissions table
-  scopes: Array<string> // Only populated for store/branch scoped users, for store scoped user they are store ids, for branch scoped users they are branch ids
+  scopes: Array<string> // Store numbers or branch numbers (client-facing identifiers)
   isActive: boolean
   sessionId?: string // Unique identifier for this session, used to sync with loggedInStaff table
 }

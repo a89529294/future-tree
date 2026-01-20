@@ -7,6 +7,7 @@ import { stores } from '@/db/schemas/resources/stores'
 import { transactionItems } from '@/db/schemas/resources/transaction-items'
 import { transactions } from '@/db/schemas/resources/transactions'
 
+import { branchAdmins } from './branch-admins'
 import {
   machineStatusEnum,
   roleEnum,
@@ -18,6 +19,7 @@ import { roles } from './roles'
 import { staff } from './staff'
 import { staffPermissions } from './staff-permissions'
 import { staffRoleAssignments } from './staff-role-assignments'
+import { storeAdmins } from './store-admins'
 import { userScopes } from './user-scopes'
 
 // Relations
@@ -27,23 +29,33 @@ export const staffRelations = relations(staff, ({ many, one }) => ({
     references: [staffRoleAssignments.staffId],
     relationName: 'roleAssignments',
   }),
-  scope: one(userScopes, {
-    fields: [staff.id],
-    references: [userScopes.staffId],
+  scopes: many(userScopes, {
     relationName: 'scopes',
   }),
   permissions: many(staffPermissions, {
     relationName: 'permissions',
   }),
   loggedIn: one(loggedInStaff),
+  storeAdmin: one(storeAdmins, {
+    fields: [staff.id],
+    references: [storeAdmins.staffId],
+  }),
+  branchAdmin: one(branchAdmins, {
+    fields: [staff.id],
+    references: [branchAdmins.staffId],
+  }),
 }))
 
-export const storesRelations = relations(stores, ({ many }) => ({
+export const storesRelations = relations(stores, ({ many, one }) => ({
   branches: many(branches),
   userScopes: many(userScopes),
   machines: many(machines),
   inventory: many(inventory),
   transactions: many(transactions),
+  admin: one(storeAdmins, {
+    fields: [stores.id],
+    references: [storeAdmins.storeId],
+  }),
 }))
 
 export const branchesRelations = relations(branches, ({ one, many }) => ({
@@ -54,6 +66,10 @@ export const branchesRelations = relations(branches, ({ one, many }) => ({
   machines: many(machines),
   inventory: many(inventory),
   transactions: many(transactions),
+  admin: one(branchAdmins, {
+    fields: [branches.id],
+    references: [branchAdmins.branchId],
+  }),
 }))
 
 export const machinesRelations = relations(machines, ({ one, many }) => ({
@@ -144,8 +160,12 @@ export const userScopesRelations = relations(userScopes, ({ one }) => ({
     relationName: 'scopes',
   }),
   store: one(stores, {
-    fields: [userScopes.storeNumber],
+    fields: [userScopes.storeId],
     references: [stores.id],
+  }),
+  branch: one(branches, {
+    fields: [userScopes.branchId],
+    references: [branches.id],
   }),
 }))
 
@@ -172,7 +192,30 @@ export const staffSessionsRelations = relations(loggedInStaff, ({ one }) => ({
   }),
 }))
 
+export const storeAdminsRelations = relations(storeAdmins, ({ one }) => ({
+  staff: one(staff, {
+    fields: [storeAdmins.staffId],
+    references: [staff.id],
+  }),
+  store: one(stores, {
+    fields: [storeAdmins.storeId],
+    references: [stores.id],
+  }),
+}))
+
+export const branchAdminsRelations = relations(branchAdmins, ({ one }) => ({
+  staff: one(staff, {
+    fields: [branchAdmins.staffId],
+    references: [staff.id],
+  }),
+  branch: one(branches, {
+    fields: [branchAdmins.branchId],
+    references: [branches.id],
+  }),
+}))
+
 export {
+  branchAdmins,
   branches,
   inventory,
   loggedInStaff,
@@ -184,6 +227,7 @@ export {
   staff,
   staffPermissions,
   staffRoleAssignments,
+  storeAdmins,
   transactionItems,
   transactions,
   transactionStatusEnum,
