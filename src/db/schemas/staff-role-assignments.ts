@@ -19,5 +19,7 @@ export const staffRoleAssignments = pgTable(
       .notNull(),
     assignedBy: uuid('assigned_by').references(() => staff.id),
   },
-  (table) => [unique('staff_id_unique').on(table.staffId)],
+  (table) => [
+    unique('staff_role_assignments_staff_id_unique').on(table.staffId),
+  ],
 )

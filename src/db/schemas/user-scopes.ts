@@ -28,5 +28,5 @@ export const userScopes = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [unique('staff_id_unique').on(table.staffId)],
+  (table) => [unique('user_scopes_staff_id_unique').on(table.staffId)],
 )
