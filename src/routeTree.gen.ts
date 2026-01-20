@@ -96,10 +96,10 @@ export interface FileRoutesByFullPath {
   '/admin/login': typeof AdminLoginRoute
   '/stores/create': typeof AuthenticatedStoresCreateRoute
   '/stores/$storeNumber/edit': typeof AuthenticatedStoresStoreNumberEditRoute
-  '/stores/$storeNumber': typeof AuthenticatedStoresStoreNumberIndexRoute
+  '/stores/$storeNumber/': typeof AuthenticatedStoresStoreNumberIndexRoute
   '/stores/$storeNumber/branches/create': typeof AuthenticatedStoresStoreNumberBranchesCreateRoute
   '/stores/$storeNumber/branches/$branchNumber/edit': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberEditRoute
-  '/stores/$storeNumber/branches/$branchNumber': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRoute
+  '/stores/$storeNumber/branches/$branchNumber/': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -139,10 +139,10 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/stores/create'
     | '/stores/$storeNumber/edit'
-    | '/stores/$storeNumber'
+    | '/stores/$storeNumber/'
     | '/stores/$storeNumber/branches/create'
     | '/stores/$storeNumber/branches/$branchNumber/edit'
-    | '/stores/$storeNumber/branches/$branchNumber'
+    | '/stores/$storeNumber/branches/$branchNumber/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -191,7 +191,7 @@ declare module '@tanstack/react-router' {
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -233,7 +233,7 @@ declare module '@tanstack/react-router' {
     '/_authenticated/stores/$storeNumber/': {
       id: '/_authenticated/stores/$storeNumber/'
       path: '/stores/$storeNumber'
-      fullPath: '/stores/$storeNumber'
+      fullPath: '/stores/$storeNumber/'
       preLoaderRoute: typeof AuthenticatedStoresStoreNumberIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
@@ -254,7 +254,7 @@ declare module '@tanstack/react-router' {
     '/_authenticated/stores/$storeNumber/branches/$branchNumber/': {
       id: '/_authenticated/stores/$storeNumber/branches/$branchNumber/'
       path: '/stores/$storeNumber/branches/$branchNumber'
-      fullPath: '/stores/$storeNumber/branches/$branchNumber'
+      fullPath: '/stores/$storeNumber/branches/$branchNumber/'
       preLoaderRoute: typeof AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
