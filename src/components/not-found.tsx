@@ -1,5 +1,6 @@
-import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+
+import { RouterLink } from '@/components/router-link'
 
 export function NotFound({ children }: { children?: ReactNode }) {
   return (
@@ -14,12 +15,12 @@ export function NotFound({ children }: { children?: ReactNode }) {
         >
           Go back
         </button>
-        <Link
+        <RouterLink
           to="/"
           className="bg-cyan-600 text-white px-2 py-1 rounded-sm uppercase font-black text-sm"
         >
           Start Over
-        </Link>
+        </RouterLink>
       </p>
     </div>
   )

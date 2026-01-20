@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import { AppSidebar } from '@/components/app-sidebar'
 import { Button } from '@/components/ui/button'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { countiesQueryOptions } from '@/queries/tw-address'
 import { logoutFn } from '@/utils/auth/authenticate'
 
 export const Route = createFileRoute('/_authenticated')({
@@ -13,6 +14,8 @@ export const Route = createFileRoute('/_authenticated')({
         to: '/admin/login',
       })
     }
+
+    context.queryClient.ensureQueryData(countiesQueryOptions)
   },
   component: AuthenticatedLayout,
 })

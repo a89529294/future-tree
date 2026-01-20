@@ -46,7 +46,7 @@ export function useAnyPermission(actions: Array<Permission>): boolean {
  */
 export function useCanAccessStore(storeId: string): boolean {
   const user = useRequiredAuth()
-  return user.scopes.some((s) => s.storeId === storeId)
+  return user.scopes.includes(storeId)
 }
 
 /**
@@ -63,7 +63,7 @@ export function useCanAccessBranch(branchId: string): boolean {
   if (user.scopeType === 'store') {
     return true
   }
-  return user.scopes.some((s) => s.scopeId === branchId)
+  return user.scopes.includes(branchId)
 }
 
 // COMBINED CHECKS (Permission + Data Access)
@@ -77,10 +77,7 @@ export function useCanAccessBranch(branchId: string): boolean {
  */
 export function useCanDoOnStore(action: Permission, storeId: string): boolean {
   const user = useRequiredAuth()
-  return (
-    user.permissions.includes(action) &&
-    user.scopes.some((s) => s.storeId === storeId)
-  )
+  return user.permissions.includes(action) && user.scopes.includes(storeId)
 }
 
 /**
@@ -100,8 +97,5 @@ export function useCanDoOnBranch(
   if (user.scopeType === 'store') {
     return user.permissions.includes(action)
   }
-  return (
-    user.permissions.includes(action) &&
-    user.scopes.some((s) => s.scopeId === branchId)
-  )
+  return user.permissions.includes(action) && user.scopes.includes(branchId)
 }

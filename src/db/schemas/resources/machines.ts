@@ -35,8 +35,6 @@ export const machineFormSchema = createInsertSchema(machines, {
   thingId: (schema) =>
     schema.trim().min(1, 'thingID為必填欄位').max(50, '不能高過50字'),
 }).pick({
-  branchId: true,
-  storeId: true,
   thingId: true,
   displayName: true,
   status: true,

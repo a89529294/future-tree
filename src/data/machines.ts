@@ -13,33 +13,43 @@ import { db } from '@/db'
 import { branches } from '@/db/schemas'
 import { machineFormSchema, machines } from '@/db/schemas/resources/machines'
 
-const createMachine = createServerFn({ method: 'POST' })
-  .inputValidator(machineFormSchema)
+export const createMachine = createServerFn({ method: 'POST' })
+  .inputValidator(
+    machineFormSchema.extend({
+      branchNumber: z.string(),
+    }),
+  )
   .handler(
     withDbErrors(async ({ data }) => {
       const user = await requireAuth()
       requirePermission(user, 'machines.create')
 
       const branch = await db.query.branches.findFirst({
-        where: eq(branches.id, data.branchId),
+        where: eq(branches.branchNumber, data.branchNumber),
       })
       if (!branch) {
-        throw new NotFoundError('branch', data.branchId)
+        throw new NotFoundError('branch', data.branchNumber)
       }
 
       requireAccessBranch(user, branch)
 
-      // Insert with denormalized storeId from branch
+      const { branchNumber, ...formData } = data
+
+      // Insert with branch.id (UUID) for FK and denormalized storeId from branch
       const [newMachine] = await db
         .insert(machines)
-        .values({ ...data, storeId: branch.storeId })
+        .values({
+          ...formData,
+          branchId: branch.id,
+          storeId: branch.storeNumber,
+        })
         .returning()
 
       return newMachine
     }, 'Create machine failed:'),
   )
 
-const readMachine = createServerFn()
+export const readMachine = createServerFn()
   .inputValidator((data: { machineId: string; branchId: string }) => data)
   .handler(
     withDbErrors(async ({ data }) => {
@@ -47,7 +57,7 @@ const readMachine = createServerFn()
       requirePermission(user, 'machines.read')
 
       const branch = await db.query.branches.findFirst({
-        where: eq(branches.id, data.branchId),
+        where: eq(branches.branchNumber, data.branchId),
       })
       if (!branch) {
         throw new NotFoundError('branch', data.branchId)
@@ -65,7 +75,7 @@ const readMachine = createServerFn()
     }, 'Read machine failed:'),
   )
 
-const readMachines = createServerFn()
+export const readMachines = createServerFn()
   .inputValidator((branchId: string) => branchId)
   .handler(
     withDbErrors(async ({ data }) => {
@@ -73,7 +83,7 @@ const readMachines = createServerFn()
       requirePermission(user, 'machines.read')
 
       const branch = await db.query.branches.findFirst({
-        where: eq(branches.id, data),
+        where: eq(branches.branchNumber, data),
       })
       if (!branch) {
         throw new NotFoundError('branch', data)
@@ -87,7 +97,7 @@ const readMachines = createServerFn()
     }, 'Read machines failed:'),
   )
 
-const updateMachine = createServerFn({ method: 'POST' })
+export const updateMachine = createServerFn({ method: 'POST' })
   .inputValidator(
     machineFormSchema.extend({
       machineId: z.string(),
@@ -100,7 +110,7 @@ const updateMachine = createServerFn({ method: 'POST' })
       requirePermission(user, 'machines.update')
 
       const branch = await db.query.branches.findFirst({
-        where: eq(branches.id, data.branchId),
+        where: eq(branches.branchNumber, data.branchId),
       })
       if (!branch) {
         throw new NotFoundError('branch', data.branchId)
@@ -124,7 +134,7 @@ const updateMachine = createServerFn({ method: 'POST' })
     }, 'Update machine failed:'),
   )
 
-const deleteMachine = createServerFn({ method: 'POST' })
+export const deleteMachine = createServerFn({ method: 'POST' })
   .inputValidator((data: { machineId: string; branchId: string }) => data)
   .handler(
     withDbErrors(async ({ data }) => {
@@ -132,7 +142,7 @@ const deleteMachine = createServerFn({ method: 'POST' })
       requirePermission(user, 'machines.delete')
 
       const branch = await db.query.branches.findFirst({
-        where: eq(branches.id, data.branchId),
+        where: eq(branches.branchNumber, data.branchId),
       })
       if (!branch) {
         throw new NotFoundError('branch', data.branchId)
@@ -153,7 +163,7 @@ const deleteMachine = createServerFn({ method: 'POST' })
     }, 'Delete machine failed:'),
   )
 
-const deleteMachines = createServerFn({ method: 'POST' })
+export const deleteMachines = createServerFn({ method: 'POST' })
   .inputValidator(
     (data: { machineIds: Array<string>; branchId: string }) => data,
   )
@@ -163,7 +173,7 @@ const deleteMachines = createServerFn({ method: 'POST' })
       requirePermission(user, 'machines.delete')
 
       const branch = await db.query.branches.findFirst({
-        where: eq(branches.id, data.branchId),
+        where: eq(branches.branchNumber, data.branchId),
       })
       if (!branch) {
         throw new NotFoundError('branch', data.branchId)

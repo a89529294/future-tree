@@ -1,12 +1,28 @@
-import { pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import {
+  pgSequence,
+  pgTable,
+  timestamp,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import type z from 'zod'
 
+// Sequence for store_id auto-generation
+export const storeNumberSeq = pgSequence('store_number_seq', { startWith: 1 })
+
+// 集團
 export const stores = pgTable('stores', {
   id: uuid().defaultRandom().primaryKey(),
-  name: varchar('name', { length: 255 }).notNull(),
-  address: text('address'),
-  phoneNumber: varchar('phone_number', { length: 20 }),
+  storeNumber: varchar('store_number', { length: 10 })
+    .default(sql`'GP-' || lpad(nextval('store_number_seq')::text, 5, '0')`)
+    .notNull()
+    .unique(),
+  name: varchar('name', { length: 50 }).notNull().unique(),
+  city: varchar('city', { length: 10 }),
+  district: varchar('district', { length: 10 }),
+  address: varchar('address', { length: 100 }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -22,17 +38,14 @@ export type Store = z.infer<typeof storeSchema>
 export const storeFormSchema = createInsertSchema(stores, {
   name: (schema) =>
     schema.trim().min(1, '名稱為必填欄位').max(50, '不能高過50字'),
-  phoneNumber: (schema) =>
-    schema
-      .trim()
-      .regex(/^[0-9-+() ]*$/, '請輸入有效的電話號碼')
-      .max(20, '不能超過20位數'),
-  address: (schema) =>
-    schema.trim().min(1, '地址有填入不能為空').max(100, '不能超過100字'),
+  city: (schema) => schema.trim().max(10, '不能超過10字'),
+  district: (schema) => schema.trim().max(10, '不能超過10字'),
+  address: (schema) => schema.trim().max(100, '不能超過100字'),
 }).pick({
   name: true,
+  city: true,
+  district: true,
   address: true,
-  phoneNumber: true,
 })
 
 export type StoreFormData = z.infer<typeof storeFormSchema>

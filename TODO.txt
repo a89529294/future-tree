@@ -1,0 +1,2 @@
+2026/01/19
+1. consider replacing all instances of store.id with store.storeNumber, i.e. remove id from store and simply use storeNumber, maybe do the same with branches

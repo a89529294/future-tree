@@ -8,9 +8,9 @@ import {
   updateStore,
 } from '@/data/stores'
 
-export const storeQueryOptions = (storeId: string) => ({
-  queryKey: ['stores', storeId],
-  queryFn: () => readStore({ data: storeId }),
+export const storeQueryOptions = (storeNumber: string) => ({
+  queryKey: ['stores', storeNumber],
+  queryFn: () => readStore({ data: storeNumber }),
 })
 
 export const storesQueryOptions = () => ({
@@ -18,8 +18,8 @@ export const storesQueryOptions = () => ({
   queryFn: () => readStores(),
 })
 
-export const useStore = (storeId: string) =>
-  useSuspenseQuery(storeQueryOptions(storeId))
+export const useStore = (storeNumber: string) =>
+  useSuspenseQuery(storeQueryOptions(storeNumber))
 
 export const useStores = () => useSuspenseQuery(storesQueryOptions())
 

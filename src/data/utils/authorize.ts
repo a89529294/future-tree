@@ -59,7 +59,7 @@ export function canAccessStore(user: SessionUser, store: Store): boolean {
   }
 
   if (user.scopeType === 'store') {
-    return user.scopes.includes(store.id)
+    return user.scopes.includes(store.storeNumber)
   }
 
   return false
@@ -71,10 +71,10 @@ export function canAccessBranch(user: SessionUser, branch: Branch): boolean {
   }
 
   if (user.scopeType === 'store') {
-    return user.scopes.includes(branch.storeId)
+    return user.scopes.includes(branch.storeNumber)
   }
 
-  return user.scopes.includes(branch.id)
+  return user.scopes.includes(branch.branchNumber)
 }
 
 export function requireAccessGlobal(user: SessionUser) {

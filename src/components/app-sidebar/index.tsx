@@ -1,7 +1,7 @@
-import { Link } from '@tanstack/react-router'
 import { StoreIcon } from 'lucide-react'
 import { Suspense } from 'react'
 
+import { RouterLink } from '@/components/router-link'
 import {
   Sidebar,
   SidebarContent,
@@ -31,13 +31,13 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="h-16">
-        <Link
+        <RouterLink
           to="/"
           className="h-full flex flex-row items-center cursor-pointer gap-2 "
         >
           <img className="size-10 object-contain" src="/future-tree-logo.png" />
           <span className="text-xl font-bold">未來樹</span>
-        </Link>
+        </RouterLink>
       </SidebarHeader>
       <SidebarContent>
         {/* Stores Section */}
@@ -74,7 +74,7 @@ export function AppSidebar() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <Link to="/test">Test Page</Link>
+                <RouterLink to="/test">Test Page</RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

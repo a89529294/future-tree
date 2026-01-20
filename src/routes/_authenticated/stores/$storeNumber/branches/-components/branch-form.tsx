@@ -1,6 +1,5 @@
 import { useForm, useStore } from '@tanstack/react-form'
 
-import { ControlledAlertDialog } from '@/components/controlled-alert-dialog'
 import { RouterLink } from '@/components/router-link'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,30 +19,32 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
-import type { Store, StoreFormData } from '@/db/schemas'
-import { storeFormSchema } from '@/db/schemas'
+import type { Branch, BranchFormData } from '@/db/schemas/resources/branches'
+import { branchFormSchema } from '@/db/schemas/resources/branches'
 import { useCounties, useDistricts } from '@/queries/tw-address'
 
-type StoreFormProps =
+type BranchFormProps =
   | {
       mode: 'new'
       initialData?: never
-      onSubmit: (store: StoreFormData) => void
+      storeNumber: string
+      onSubmit: (branch: BranchFormData) => void
     }
   | {
       mode: 'view'
-      initialData: Store
+      initialData: Branch
       storeNumber: string
+      branchNumber: string
     }
   | {
       mode: 'edit'
-      initialData: Store
+      initialData: Branch
       storeNumber: string
-      onSubmit: (store: StoreFormData) => void
-      onDelete: () => Promise<void>
+      branchNumber: string
+      onSubmit: (branch: BranchFormData) => void
     }
 
-export function StoreForm(props: StoreFormProps) {
+export function BranchForm(props: BranchFormProps) {
   const isViewMode = props.mode === 'view'
 
   const { queryResult: countiesQuery, nameToCode, codeToName } = useCounties()
@@ -53,27 +54,30 @@ export function StoreForm(props: StoreFormProps) {
           name: props.initialData.name,
           city: props.initialData.city
             ? nameToCode[props.initialData.city]
-            : null,
+            : '',
           district: props.initialData.district,
           address: props.initialData.address,
+          phoneNumber: props.initialData.phoneNumber,
         }
       : {
           name: '',
-          city: null,
-          district: null,
-          address: null,
+          city: '',
+          district: '',
+          address: '',
+          phoneNumber: null,
         },
     validators: {
-      onSubmit: storeFormSchema,
+      onSubmit: branchFormSchema,
     },
     onSubmit: ({ value }) => {
       console.log(value)
       if (!isViewMode) {
         props.onSubmit({
           name: value.name,
-          city: value.city ? codeToName[value.city] : null,
+          city: value.city ? codeToName[value.city] : '',
           district: value.district,
           address: value.address,
+          phoneNumber: value.phoneNumber,
         })
       }
     },
@@ -87,7 +91,7 @@ export function StoreForm(props: StoreFormProps) {
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>集團資訊</CardTitle>
+        <CardTitle>店家資訊</CardTitle>
       </CardHeader>
       <form
         onSubmit={(e) => {
@@ -99,13 +103,29 @@ export function StoreForm(props: StoreFormProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Field className="space-y-1">
+              <FieldLabel htmlFor="branchNumber">店家 ID</FieldLabel>
+              <Input
+                id="branchNumber"
+                name="branchNumber"
+                value={
+                  props.mode === 'new'
+                    ? '自動生成'
+                    : props.initialData.branchNumber
+                }
+                disabled
+                className="bg-muted opacity-50 cursor-not-allowed"
+              />
+            </Field>
+          </div>
+          <div className="space-y-2">
+            <Field className="space-y-1">
               <FieldLabel htmlFor="storeNumber">集團 ID</FieldLabel>
               <Input
                 id="storeNumber"
                 name="storeNumber"
                 value={
                   props.mode === 'new'
-                    ? '自動生成'
+                    ? props.storeNumber
                     : props.initialData.storeNumber
                 }
                 disabled
@@ -150,10 +170,10 @@ export function StoreForm(props: StoreFormProps) {
                     <Field className="space-y-1" data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>城市</FieldLabel>
                       <Select
-                        value={field.state.value ?? ''}
+                        value={field.state.value}
                         onValueChange={(value) => {
                           field.handleChange(value)
-                          form.setFieldValue('district', null)
+                          form.setFieldValue('district', '')
                         }}
                         disabled={isViewMode || isSubmitting}
                       >
@@ -203,7 +223,7 @@ export function StoreForm(props: StoreFormProps) {
                     <Field className="space-y-1" data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>區域</FieldLabel>
                       <Select
-                        value={field.state.value ?? ''}
+                        value={field.state.value}
                         onValueChange={field.handleChange}
                         disabled={isViewMode || isSubmitting || !selectedCity}
                       >
@@ -213,7 +233,7 @@ export function StoreForm(props: StoreFormProps) {
                         <SelectContent position="popper">
                           {districtsQuery.isError ? (
                             <SelectItem key={'error'} value={'error'}>
-                              無法讀取無法讀取鄉鎮
+                              無法讀取鄉鎮
                             </SelectItem>
                           ) : districtsQuery.isPending ? (
                             <SelectItem
@@ -257,6 +277,33 @@ export function StoreForm(props: StoreFormProps) {
                     <Input
                       id={field.name}
                       name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      disabled={isViewMode || isSubmitting}
+                      aria-invalid={isInvalid}
+                    />
+                    {isInvalid && (
+                      <FieldError errors={field.state.meta.errors} />
+                    )}
+                  </Field>
+                )
+              }}
+            />
+          </div>
+          <div className="space-y-2">
+            <form.Field
+              name="phoneNumber"
+              children={(field) => {
+                const isInvalid =
+                  field.state.meta.isTouched && !field.state.meta.isValid
+
+                return (
+                  <Field className="space-y-1" data-invalid={isInvalid}>
+                    <FieldLabel htmlFor={field.name}>電話號碼</FieldLabel>
+                    <Input
+                      id={field.name}
+                      name={field.name}
                       value={field.state.value ?? ''}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -272,13 +319,15 @@ export function StoreForm(props: StoreFormProps) {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex gap-2">
+        <CardFooter className="flex justify-end gap-2">
           {props.mode === 'view' && (
             <Button asChild>
               <RouterLink
-                className="ml-auto"
-                to="/stores/$storeNumber/edit"
-                params={{ storeNumber: props.storeNumber }}
+                to="/stores/$storeNumber/branches/$branchNumber/edit"
+                params={{
+                  storeNumber: props.storeNumber,
+                  branchNumber: props.branchNumber,
+                }}
               >
                 編輯
               </RouterLink>
@@ -287,17 +336,14 @@ export function StoreForm(props: StoreFormProps) {
 
           {props.mode === 'edit' && (
             <>
-              <ControlledAlertDialog
-                warning={`是否要刪除 ${props.initialData.name}`}
-                description="刪除後會連帶移除相關資料, 包含店家,機器等相關資料"
-                onDelete={props.onDelete}
-              />
-
-              <Button className="ml-auto" variant="outline" asChild>
+              <Button variant="outline" asChild>
                 <RouterLink
                   disabled={isSubmitting}
-                  to="/stores/$storeNumber"
-                  params={{ storeNumber: props.storeNumber }}
+                  to="/stores/$storeNumber/branches/$branchNumber"
+                  params={{
+                    storeNumber: props.storeNumber,
+                    branchNumber: props.branchNumber,
+                  }}
                 >
                   取消編輯
                 </RouterLink>
@@ -309,7 +355,7 @@ export function StoreForm(props: StoreFormProps) {
           )}
 
           {props.mode === 'new' && (
-            <Button className="ml-auto" type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting}>
               建立
             </Button>
           )}

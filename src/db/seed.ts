@@ -178,8 +178,9 @@ async function seed() {
       .insert(schema.stores)
       .values({
         name: 'Downtown Store',
+        city: '新竹縣',
+        district: '湖口鄉',
         address: '123 Main Street, Downtown',
-        phoneNumber: '+1555000001',
       })
       .returning()
 
@@ -187,8 +188,9 @@ async function seed() {
       .insert(schema.stores)
       .values({
         name: 'Uptown Store',
+        city: '新竹縣',
+        district: '湖口鄉',
         address: '456 Oak Avenue, Uptown',
-        phoneNumber: '+1555000002',
       })
       .returning()
 
@@ -199,27 +201,36 @@ async function seed() {
     const [store1Branch1] = await db
       .insert(schema.branches)
       .values({
-        storeId: store1.id,
+        storeNumber: store1.storeNumber,
         name: 'Main Floor',
-        description: 'Main floor vending area',
+        city: '新竹縣',
+        district: '湖口鄉',
+        address: '123 Main Street, Downtown',
+        phoneNumber: '+886987654321',
       })
       .returning()
 
     const [store2Branch1] = await db
       .insert(schema.branches)
       .values({
-        storeId: store2.id,
+        storeNumber: store2.storeNumber,
         name: 'Main Branch',
-        description: 'Main branch vending area',
+        city: '新竹縣',
+        district: '湖口鄉',
+        address: '456 Oak Avenue, Uptown',
+        phoneNumber: '+886976543210',
       })
       .returning()
 
     const [store2Branch2] = await db
       .insert(schema.branches)
       .values({
-        storeId: store2.id,
+        storeNumber: store2.storeNumber,
         name: 'Second Floor',
-        description: 'Second floor vending area',
+        city: '新竹縣',
+        district: '湖口鄉',
+        address: '456 Oak Avenue, Uptown - 2nd Floor',
+        phoneNumber: '+886965432109',
       })
       .returning()
 
@@ -232,32 +243,32 @@ async function seed() {
     await db.insert(schema.userScopes).values({
       staffId: storeAdmin1.id,
       scopeType: 'store',
-      scopeId: store1.id,
-      storeId: store1.id, // For store scopes, scopeId === storeId
+      scopeNumber: store1.storeNumber,
+      storeNumber: store1.storeNumber,
     })
 
     // Store admin 2 gets store-level scope for store 2
     await db.insert(schema.userScopes).values({
       staffId: storeAdmin2.id,
       scopeType: 'store',
-      scopeId: store2.id,
-      storeId: store2.id,
+      scopeNumber: store2.storeNumber,
+      storeNumber: store2.storeNumber,
     })
 
     // Branch admin gets branch-level scope for store2Branch1
     await db.insert(schema.userScopes).values({
       staffId: branchAdmin.id,
       scopeType: 'branch',
-      scopeId: store2Branch1.id,
-      storeId: store2.id,
+      scopeNumber: store2Branch1.branchNumber,
+      storeNumber: store2Branch1.storeNumber,
     })
 
     // Staff member gets branch-level scope for store1Branch1
     await db.insert(schema.userScopes).values({
       staffId: staffMember.id,
       scopeType: 'branch',
-      scopeId: store1Branch1.id,
-      storeId: store1.id,
+      scopeNumber: store1Branch1.branchNumber,
+      storeNumber: store1Branch1.storeNumber,
     })
 
     console.log('User scopes granted successfully')
@@ -438,7 +449,6 @@ async function seed() {
     }
 
     console.log('\n=== Seed completed successfully! ===')
-    console.log('\nCreated users (all with password: password123):')
     console.log(`- Super Admin: ${superAdmin.email}`)
     console.log(
       `- Store Admin 1: ${storeAdmin1.email} (manages ${store1.name})`,

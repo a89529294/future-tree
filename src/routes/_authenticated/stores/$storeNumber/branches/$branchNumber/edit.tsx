@@ -8,7 +8,7 @@ import { useBranch, useUpdateBranch } from '@/queries/branches'
 import { BranchForm } from '../-components/branch-form'
 
 export const Route = createFileRoute(
-  '/_authenticated/stores/$storeId/branches/$branchId/edit',
+  '/_authenticated/stores/$storeNumber/branches/$branchNumber/edit',
 )({
   component: BranchEditComponent,
   pendingComponent: PendingComponent,
@@ -16,36 +16,38 @@ export const Route = createFileRoute(
 })
 
 function BranchEditComponent() {
-  const { storeId, branchId } = Route.useParams()
-  const deferredBranchId = useDeferredValue(branchId)
-  const { data: branch } = useBranch(deferredBranchId)
+  const { storeNumber, branchNumber } = Route.useParams()
+  const deferredBranchNumber = useDeferredValue(branchNumber)
+  const { data: branch } = useBranch(deferredBranchNumber)
   const updateBranch = useUpdateBranch()
   const navigate = useNavigate()
 
   return (
     <div className="space-y-6 bg-slate-900 h-full p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">編輯據點</h1>
+        <h1 className="text-3xl font-bold tracking-tight">編輯店家</h1>
       </div>
 
       <div
         className={
-          branchId !== deferredBranchId ? 'opacity-50 transition-opacity' : ''
+          branchNumber !== deferredBranchNumber
+            ? 'opacity-50 transition-opacity'
+            : ''
         }
       >
         <BranchForm
           key={branch.id}
           initialData={branch}
           mode={'edit'}
-          storeId={storeId}
-          branchId={branchId}
+          storeNumber={storeNumber}
+          branchNumber={branchNumber}
           onSubmit={async (data) => {
             await updateBranch.mutateAsync({
-              data: { branchId: branchId, ...data },
+              data: { branchId: branchNumber, storeNumber, ...data },
             })
             navigate({
-              to: '/stores/$storeId/branches/$branchId',
-              params: { storeId, branchId },
+              to: '/stores/$storeNumber/branches/$branchNumber',
+              params: { storeNumber, branchNumber },
             })
           }}
         />

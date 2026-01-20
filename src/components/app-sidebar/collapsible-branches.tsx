@@ -1,7 +1,8 @@
-import { Link, useMatchRoute } from '@tanstack/react-router'
+import { useMatchRoute } from '@tanstack/react-router'
 import { ChevronRight, Loader2, MapPin, PlusIcon } from 'lucide-react'
 import { useRef, useState } from 'react'
 
+import { RouterLink } from '@/components/router-link'
 import {
   Collapsible,
   CollapsibleContent,
@@ -28,12 +29,12 @@ export function CollapsibleBranches() {
 
   // Group branches by store for display
   const storeMap = new Map<
-    string,
+    string, // storeNumber
     { storeName: string; branches: typeof branches }
   >()
 
   branches.forEach((branch) => {
-    const storeKey = branch.storeId
+    const storeKey = branch.store.storeNumber
     const existing = storeMap.get(storeKey)
 
     if (existing) {
@@ -50,11 +51,11 @@ export function CollapsibleBranches() {
 
   const matchRoute = useMatchRoute()
   const matchBranchRoute = matchRoute({
-    to: '/stores/$storeId/branches/$branchId',
+    to: '/stores/$storeNumber/branches/$branchNumber',
     fuzzy: true,
   })
   const matchCreateBranchRoute = matchRoute({
-    to: '/stores/$storeId/branches/create',
+    to: '/stores/$storeNumber/branches/create',
   })
   const isRouteMatched = !!matchBranchRoute || !!matchCreateBranchRoute
 
@@ -76,7 +77,7 @@ export function CollapsibleBranches() {
         <SidebarGroupLabel asChild className="text-sm">
           <CollapsibleTrigger>
             <MapPin className="mr-2 h-4 w-4" />
-            據點
+            店家
             <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:-rotate-90" />
           </CollapsibleTrigger>
         </SidebarGroupLabel>
@@ -110,7 +111,7 @@ export function CollapsibleBranchesFallback() {
         <SidebarGroupLabel asChild className="text-sm">
           <CollapsibleTrigger>
             <MapPin className="mr-2 h-4 w-4" />
-            據點
+            店家
             <Loader2 className="ml-auto h-4 w-4 animate-spin" />
           </CollapsibleTrigger>
         </SidebarGroupLabel>
@@ -128,22 +129,23 @@ function SubCollapsible({
   storeName: string
   branches: Array<{
     id: string
+    branchNumber: string
     name: string
   }>
 }) {
   const matchRoute = useMatchRoute()
   const matchBranchRoute = matchRoute({
-    to: '/stores/$storeId/branches/$branchId',
+    to: '/stores/$storeNumber/branches/$branchNumber',
     fuzzy: true,
   })
   const matchCreateBranchRoute = matchRoute({
-    to: '/stores/$storeId/branches/create',
+    to: '/stores/$storeNumber/branches/create',
   })
   const storeMatch =
     (typeof matchBranchRoute === 'object' &&
-      matchBranchRoute.storeId === storeId) ||
+      matchBranchRoute.storeNumber === storeId) ||
     (typeof matchCreateBranchRoute === 'object' &&
-      matchCreateBranchRoute.storeId === storeId)
+      matchCreateBranchRoute.storeNumber === storeId)
   const storeMatchRef = useRef(storeMatch)
   const [open, setOpen] = useState(storeMatch)
 
@@ -173,27 +175,27 @@ function SubCollapsible({
                   asChild
                   isActive={
                     typeof matchBranchRoute === 'object' &&
-                    matchBranchRoute.storeId === storeId &&
-                    matchBranchRoute.branchId === branch.id
+                    matchBranchRoute.storeNumber === storeId &&
+                    matchBranchRoute.branchNumber === branch.branchNumber
                   }
                 >
-                  <Link
-                    to="/stores/$storeId/branches/$branchId"
+                  <RouterLink
+                    to="/stores/$storeNumber/branches/$branchNumber"
                     params={{
-                      storeId,
-                      branchId: branch.id,
+                      storeNumber: storeId,
+                      branchNumber: branch.branchNumber,
                     }}
                   >
                     <span>{branch.name}</span>
-                  </Link>
+                  </RouterLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             ))}
             <SidebarMenuSubItem>
               <SidebarMenuSubButton asChild>
-                <Link
-                  to="/stores/$storeId/branches/create"
-                  params={{ storeId }}
+                <RouterLink
+                  to="/stores/$storeNumber/branches/create"
+                  params={{ storeNumber: storeId }}
                   className={cn(
                     sidebarMenuButtonVariants({
                       variant: 'outline',
@@ -203,9 +205,9 @@ function SubCollapsible({
                 >
                   <span className="flex items-center gap-2">
                     <PlusIcon className="h-3 w-3" />
-                    新增據點
+                    新增店家
                   </span>
-                </Link>
+                </RouterLink>
               </SidebarMenuSubButton>
             </SidebarMenuSubItem>
           </SidebarMenuSub>

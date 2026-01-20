@@ -1,4 +1,6 @@
-import { createFileRoute, Link, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+
+import { RouterLink } from '@/components/router-link'
 
 export const Route = createFileRoute('/')({
   beforeLoad: ({ context }) => {
@@ -16,7 +18,7 @@ function App() {
     <div className="min-h-screen grid grid-rows-12 place-items-center">
       <div className="row-start-6">請掃QR Code</div>
       <div className="row-start-7">
-        <Link to="/admin/login">或登入</Link>
+        <RouterLink to="/admin/login">或登入</RouterLink>
       </div>
     </div>
   )

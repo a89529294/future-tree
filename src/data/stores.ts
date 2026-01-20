@@ -33,7 +33,7 @@ const createStore = createServerFn({ method: 'POST' })
   )
 
 const readStore = createServerFn()
-  .inputValidator((storeId: string) => storeId)
+  .inputValidator((storeNumber: string) => storeNumber)
   .handler(
     withDbErrors(
       withSleepInDev(async ({ data }) => {
@@ -41,7 +41,7 @@ const readStore = createServerFn()
         requirePermission(user, 'stores.read')
 
         const store = await db.query.stores.findFirst({
-          where: eq(stores.id, data),
+          where: eq(stores.storeNumber, data),
         })
         if (!store) {
           throw new NotFoundError('store', data)
@@ -78,31 +78,31 @@ const readStores = createServerFn().handler(
 )
 
 const updateStore = createServerFn()
-  .inputValidator(storeFormSchema.extend({ id: z.string() }))
+  .inputValidator(storeFormSchema.extend({ storeNumber: z.string() }))
   .handler(
     withDbErrors(async ({ data }) => {
       const user = await requireAuth()
       requirePermission(user, 'stores.update')
 
       const store = await db.query.stores.findFirst({
-        where: eq(stores.id, data.id),
+        where: eq(stores.storeNumber, data.storeNumber),
       })
       if (!store) {
-        throw new Error('找不到此廠商')
+        throw new NotFoundError('store', data.storeNumber)
       }
 
       requireAccessStore(user, store)
 
-      const { id, ...updateData } = data
+      const { storeNumber, ...updateData } = data
 
       const updatedStores = await db
         .update(stores)
         .set(updateData)
-        .where(eq(stores.id, id))
+        .where(eq(stores.storeNumber, storeNumber))
         .returning()
 
       if (updatedStores.length === 0) {
-        throw new Error('找不到此廠商')
+        throw new NotFoundError('store', storeNumber)
       }
 
       return updatedStores[0]
@@ -110,7 +110,7 @@ const updateStore = createServerFn()
   )
 
 const deleteStore = createServerFn({ method: 'POST' })
-  .inputValidator((storeId: string) => storeId)
+  .inputValidator((storeNumber: string) => storeNumber)
   .handler(
     withDbErrors(
       withSleepInDev(async ({ data }) => {
@@ -121,11 +121,11 @@ const deleteStore = createServerFn({ method: 'POST' })
 
         const deletedStores = await db
           .delete(stores)
-          .where(eq(stores.id, data))
+          .where(eq(stores.storeNumber, data))
           .returning()
 
         if (deletedStores.length === 0) {
-          throw new Error('找不到此廠商')
+          throw new NotFoundError('store', data)
         }
 
         return deletedStores[0]

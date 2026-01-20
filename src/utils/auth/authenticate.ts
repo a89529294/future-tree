@@ -38,12 +38,12 @@ export const loginFn = createServerFn({ method: 'POST' })
     const result = await db.query.staff.findFirst({
       where: eq(staff.id, user.id),
       with: {
-        roleAssignments: {
+        roleAssignment: {
           with: {
             role: true,
           },
         },
-        scopes: true,
+        scope: true,
         permissions: true,
       },
     })
@@ -52,32 +52,13 @@ export const loginFn = createServerFn({ method: 'POST' })
       throw new Error('Impossible condition')
     }
 
-    // Determine the highest role (priority: super_admin > store_admin > branch_admin > staff)
-    const rolePriority: Record<SessionUser['role'], number> = {
-      super_admin: 4,
-      store_admin: 3,
-      branch_admin: 2,
-      staff: 1,
-    }
-
-    const highestRole = result.roleAssignments.reduce(
-      (
-        highest: SessionUser['role'],
-        assignment: { role: { name: SessionUser['role'] } },
-      ) => {
-        const currentRole = assignment.role.name
-        return rolePriority[currentRole] > rolePriority[highest]
-          ? currentRole
-          : highest
-      },
-      'staff' as SessionUser['role'],
-    )
+    const role = result.roleAssignment.role.name
 
     // Determine scopeType based on role
     const scopeType: SessionUser['scopeType'] =
-      highestRole === 'super_admin'
+      role === 'super_admin'
         ? 'global'
-        : highestRole === 'store_admin'
+        : role === 'store_admin'
           ? 'store'
           : 'branch'
 
@@ -90,7 +71,7 @@ export const loginFn = createServerFn({ method: 'POST' })
         email: result.email,
         firstName: result.firstName,
         lastName: result.lastName,
-        role: highestRole,
+        role: role,
         scopeType,
         permissions: result.permissions.map(
           (p: { permission: string }) => p.permission,
@@ -100,9 +81,9 @@ export const loginFn = createServerFn({ method: 'POST' })
             case 'global':
               return []
             case 'store':
-              return result.scopes.map((v) => v.storeId)
+              return [result.scope.storeNumber]
             case 'branch':
-              return result.scopes.map((v) => v.scopeId)
+              return [result.scope.scopeNumber]
             default:
               throw new Error(`Unhandled scopeType: ${scopeType}`)
           }

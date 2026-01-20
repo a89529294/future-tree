@@ -1,4 +1,4 @@
-import { pgTable, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { pgTable, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
 
 import { stores } from '@/db/schemas/resources/stores'
 
@@ -12,17 +12,21 @@ import { staff } from './staff'
 //   - A branch can only have ONE branch_admin
 //   - A branch_admin's branches must all belong to the SAME store
 //   - A staff member can only belong to ONE branch
-export const userScopes = pgTable('user_scopes', {
-  id: uuid().defaultRandom().primaryKey(),
-  staffId: uuid('staff_id')
-    .references(() => staff.id, { onDelete: 'cascade' })
-    .notNull(),
-  scopeType: scopeTypeEnum('scope_type').notNull(), // 'store' | 'branch'
-  scopeId: uuid('scope_id').notNull(), // The actual store/branch ID
-  storeId: uuid('store_id')
-    .references(() => stores.id, { onDelete: 'cascade' })
-    .notNull(), // Denormalized - always the store ID
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-})
+export const userScopes = pgTable(
+  'user_scopes',
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    staffId: uuid('staff_id')
+      .references(() => staff.id, { onDelete: 'cascade' })
+      .notNull(),
+    scopeType: scopeTypeEnum('scope_type').notNull(), // 'store' | 'branch'
+    scopeNumber: varchar('scope_number').notNull(), // The actual store/branch number
+    storeNumber: varchar('store_number')
+      .references(() => stores.id, { onDelete: 'cascade' })
+      .notNull(), // Denormalized - always the store number
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [unique('staff_id_unique').on(table.staffId)],
+)

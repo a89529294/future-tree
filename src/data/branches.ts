@@ -16,25 +16,32 @@ import { branches, branchFormSchema } from '@/db/schemas/resources/branches'
 import { withSleepInDev } from '@/utils'
 
 const createBranch = createServerFn({ method: 'POST' })
-  .inputValidator(branchFormSchema)
+  .inputValidator(
+    branchFormSchema.extend({
+      storeNumber: z.string(),
+    }),
+  )
   .handler(
-    withDbErrors(async ({ data }) => {
-      const user = await requireAuth()
-      requirePermission(user, 'branches.create')
+    withDbErrors(
+      withSleepInDev(async ({ data }) => {
+        const user = await requireAuth()
+        requirePermission(user, 'branches.create')
 
-      const store = await db.query.stores.findFirst({
-        where: eq(stores.id, data.storeId),
-      })
-      if (!store) {
-        throw new NotFoundError('store', data.storeId)
-      }
+        const store = await db.query.stores.findFirst({
+          where: eq(stores.storeNumber, data.storeNumber),
+        })
+        if (!store) {
+          throw new NotFoundError('store', data.storeNumber)
+        }
 
-      requireAccessStore(user, store)
+        requireAccessStore(user, store)
 
-      const [newBranch] = await db.insert(branches).values(data).returning()
+        const [newBranch] = await db.insert(branches).values(data).returning()
 
-      return newBranch
-    }, 'Create branch failed:'),
+        return newBranch
+      }),
+      'Create branch failed:',
+    ),
   )
 
 const readBranch = createServerFn()
@@ -45,7 +52,7 @@ const readBranch = createServerFn()
       requirePermission(user, 'branches.read')
 
       const branch = await db.query.branches.findFirst({
-        where: eq(branches.id, data),
+        where: eq(branches.branchNumber, data),
       })
       if (!branch) {
         throw new NotFoundError('branch', data)
@@ -67,7 +74,7 @@ const readBranches = createServerFn().handler(
         return await db.query.branches.findMany({
           with: {
             store: {
-              columns: { name: true },
+              columns: { name: true, storeNumber: true },
             },
           },
         })
@@ -75,20 +82,20 @@ const readBranches = createServerFn().handler(
 
       if (user.scopeType === 'store') {
         return await db.query.branches.findMany({
-          where: inArray(branches.storeId, user.scopes),
+          where: inArray(branches.storeNumber, user.scopes),
           with: {
             store: {
-              columns: { name: true },
+              columns: { name: true, storeNumber: true },
             },
           },
         })
       }
 
       return await db.query.branches.findMany({
-        where: inArray(branches.id, user.scopes),
+        where: inArray(branches.branchNumber, user.scopes),
         with: {
           store: {
-            columns: { name: true },
+            columns: { name: true, storeNumber: true },
           },
         },
       })
@@ -100,37 +107,40 @@ const readBranches = createServerFn().handler(
 const updateBranch = createServerFn({ method: 'POST' })
   .inputValidator(
     branchFormSchema.extend({
-      storeId: z.string(),
+      storeNumber: z.string(),
       branchId: z.string(),
     }),
   )
   .handler(
-    withDbErrors(async ({ data }) => {
-      const user = await requireAuth()
-      requirePermission(user, 'branches.update')
+    withDbErrors(
+      withSleepInDev(async ({ data }) => {
+        const user = await requireAuth()
+        requirePermission(user, 'branches.update')
 
-      const foundBranch = await db.query.branches.findFirst({
-        where: eq(branches.id, data.branchId),
-      })
+        const foundBranch = await db.query.branches.findFirst({
+          where: eq(branches.branchNumber, data.branchId),
+        })
 
-      if (!foundBranch) throw new NotFoundError('branch', data.branchId)
+        if (!foundBranch) throw new NotFoundError('branch', data.branchId)
 
-      requireAccessBranch(user, foundBranch)
+        requireAccessBranch(user, foundBranch)
 
-      const { branchId, storeId, ...updatedData } = data
+        const { branchId, storeNumber, ...updatedData } = data
 
-      const updatedBranches = await db
-        .update(branches)
-        .set(updatedData)
-        .where(eq(branches.id, branchId))
-        .returning()
+        const updatedBranches = await db
+          .update(branches)
+          .set(updatedData)
+          .where(eq(branches.branchNumber, branchId))
+          .returning()
 
-      if (updatedBranches.length === 0) {
-        throw new NotFoundError('branch', data.branchId)
-      }
+        if (updatedBranches.length === 0) {
+          throw new NotFoundError('branch', data.branchId)
+        }
 
-      return updatedBranches[0]
-    }, 'Update branch failed:'),
+        return updatedBranches[0]
+      }),
+      'Update branch failed:',
+    ),
   )
 
 const deleteBranch = createServerFn({ method: 'POST' })
@@ -141,7 +151,7 @@ const deleteBranch = createServerFn({ method: 'POST' })
       requirePermission(user, 'branches.delete')
 
       const store = await db.query.stores.findFirst({
-        where: eq(stores.id, data.storeId),
+        where: eq(stores.storeNumber, data.storeId),
       })
       if (!store) {
         throw new NotFoundError('store', data.storeId)
@@ -151,7 +161,7 @@ const deleteBranch = createServerFn({ method: 'POST' })
 
       const deletedBranches = await db
         .delete(branches)
-        .where(eq(branches.id, data.branchId))
+        .where(eq(branches.branchNumber, data.branchId))
         .returning()
 
       if (deletedBranches.length === 0) {
@@ -170,7 +180,7 @@ const deleteBranches = createServerFn({ method: 'POST' })
       requirePermission(user, 'branches.delete')
 
       const store = await db.query.stores.findFirst({
-        where: eq(stores.id, data.storeId),
+        where: eq(stores.storeNumber, data.storeId),
       })
       if (!store) {
         throw new NotFoundError('store', data.storeId)
@@ -180,7 +190,7 @@ const deleteBranches = createServerFn({ method: 'POST' })
 
       const deletedBranches = await db
         .delete(branches)
-        .where(inArray(branches.id, data.branchIds))
+        .where(inArray(branches.branchNumber, data.branchIds))
         .returning()
 
       return deletedBranches

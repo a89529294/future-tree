@@ -1,7 +1,8 @@
-import { Link, useMatchRoute } from '@tanstack/react-router'
+import { useMatchRoute } from '@tanstack/react-router'
 import { Building2, ChevronRight, Loader2, PlusIcon } from 'lucide-react'
 import { useRef, useState } from 'react'
 
+import { RouterLink } from '@/components/router-link'
 import {
   Collapsible,
   CollapsibleContent,
@@ -22,9 +23,9 @@ export function CollapsibleStores() {
   const { data: stores } = useStores()
   const matchRoute = useMatchRoute()
   const matchViewRoute = matchRoute({
-    to: '/stores/$storeId',
+    to: '/stores/$storeNumber',
   })
-  const matchEditRoute = matchRoute({ to: '/stores/$storeId/edit' })
+  const matchEditRoute = matchRoute({ to: '/stores/$storeNumber/edit' })
   const matchCreateRoute = !!matchRoute({ to: '/stores/create' })
 
   const isRouteMatched =
@@ -48,7 +49,7 @@ export function CollapsibleStores() {
         <SidebarGroupLabel asChild className="text-sm">
           <CollapsibleTrigger>
             <Building2 className="mr-2 h-4 w-4" />
-            廠商
+            集團
             <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:-rotate-90" />
           </CollapsibleTrigger>
         </SidebarGroupLabel>
@@ -61,26 +62,29 @@ export function CollapsibleStores() {
                     asChild
                     isActive={
                       (typeof matchViewRoute === 'object' &&
-                        matchViewRoute.storeId === store.id) ||
+                        matchViewRoute.storeNumber === store.storeNumber) ||
                       (typeof matchEditRoute === 'object' &&
-                        matchEditRoute.storeId === store.id)
+                        matchEditRoute.storeNumber === store.storeNumber)
                     }
                   >
-                    <Link
-                      to={'/stores/$storeId'}
-                      params={{ storeId: store.id }}
+                    <RouterLink
+                      to={'/stores/$storeNumber'}
+                      params={{ storeNumber: store.storeNumber }}
                       preload={false}
                     >
                       <span>{store.name}</span>
-                    </Link>
+                    </RouterLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
               <SidebarMenuItem key={'new-store'}>
                 <SidebarMenuButton variant={'outline'} asChild>
-                  <Link to="/stores/create" className="flex justify-between">
-                    新增廠商 <PlusIcon />
-                  </Link>
+                  <RouterLink
+                    to="/stores/create"
+                    className="flex justify-between"
+                  >
+                    新增集團 <PlusIcon />
+                  </RouterLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -98,7 +102,7 @@ export function CollapsibleStoresFallback() {
         <SidebarGroupLabel asChild className="text-sm">
           <CollapsibleTrigger>
             <Building2 className="mr-2 h-4 w-4" />
-            廠商
+            集團
             <Loader2 className="ml-auto h-4 w-4 animate-spin" />
           </CollapsibleTrigger>
         </SidebarGroupLabel>

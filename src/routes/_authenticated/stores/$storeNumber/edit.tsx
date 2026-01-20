@@ -9,7 +9,9 @@ import { StoreForm } from '@/components/stores/store-form'
 import type { StoreFormData } from '@/db/schemas'
 import { useDeleleStore, useStore, useUpdateStore } from '@/queries/stores'
 
-export const Route = createFileRoute('/_authenticated/stores/$storeId/edit')({
+export const Route = createFileRoute(
+  '/_authenticated/stores/$storeNumber/edit',
+)({
   component: StoreEditComponent,
   pendingComponent: PendingComponent,
   errorComponent: ResourceErrorComponent,
@@ -17,38 +19,34 @@ export const Route = createFileRoute('/_authenticated/stores/$storeId/edit')({
 
 function StoreEditComponent() {
   const queryClient = useQueryClient()
-  const { storeId } = Route.useParams()
-  const deferredStoreId = useDeferredValue(storeId)
-  const { data: initialData, error } = useStore(deferredStoreId)
+  const { storeNumber } = Route.useParams()
+  const navigate = Route.useNavigate()
+  const deferredStoreNumber = useDeferredValue(storeNumber)
+  const { data: initialData } = useStore(deferredStoreNumber)
   const { mutate, isPending } = useUpdateStore()
-  const { mutate: deleteStore } = useDeleleStore()
-
-  console.log(error)
+  const { mutateAsync: deleteStore } = useDeleleStore()
 
   return (
     <div className="space-y-6 bg-slate-900 p-4 h-full">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">編輯廠商</h1>
+        <h1 className="text-3xl font-bold tracking-tight">編輯集團</h1>
       </div>
       <div className={isPending ? 'opacity-50 transition-opacity' : ''}>
         <StoreForm
           initialData={initialData}
           mode={'edit'}
-          storeId={storeId}
+          storeNumber={storeNumber}
           onSubmit={(store: StoreFormData) =>
             mutate(
               {
                 data: {
-                  id: storeId,
+                  storeNumber,
                   ...store,
                 },
               },
               {
                 onSuccess({ name }) {
                   toast.success(`編輯 ${name} 成功`)
-                  queryClient.invalidateQueries({
-                    queryKey: ['stores', storeId],
-                  })
                   queryClient.invalidateQueries({
                     queryKey: ['stores'],
                   })
@@ -59,7 +57,20 @@ function StoreEditComponent() {
               },
             )
           }
-          onDelete={() => deleteStore({ data: storeId })}
+          onDelete={async () => {
+            await deleteStore(
+              { data: storeNumber },
+              {
+                onSuccess() {
+                  navigate({ to: '/dashboard' })
+                  queryClient.invalidateQueries({ queryKey: ['stores'] })
+                },
+                onError({ message }) {
+                  toast.error(`刪除失敗 ${message}`)
+                },
+              },
+            )
+          }}
         />
       </div>
     </div>

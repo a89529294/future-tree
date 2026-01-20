@@ -22,10 +22,14 @@ import { userScopes } from './user-scopes'
 
 // Relations
 export const staffRelations = relations(staff, ({ many, one }) => ({
-  roleAssignments: many(staffRoleAssignments, {
+  roleAssignment: one(staffRoleAssignments, {
+    fields: [staff.id],
+    references: [staffRoleAssignments.staffId],
     relationName: 'roleAssignments',
   }),
-  scopes: many(userScopes, {
+  scope: one(userScopes, {
+    fields: [staff.id],
+    references: [userScopes.staffId],
     relationName: 'scopes',
   }),
   permissions: many(staffPermissions, {
@@ -44,8 +48,8 @@ export const storesRelations = relations(stores, ({ many }) => ({
 
 export const branchesRelations = relations(branches, ({ one, many }) => ({
   store: one(stores, {
-    fields: [branches.storeId],
-    references: [stores.id],
+    fields: [branches.storeNumber],
+    references: [stores.storeNumber],
   }),
   machines: many(machines),
   inventory: many(inventory),
@@ -140,7 +144,7 @@ export const userScopesRelations = relations(userScopes, ({ one }) => ({
     relationName: 'scopes',
   }),
   store: one(stores, {
-    fields: [userScopes.storeId],
+    fields: [userScopes.storeNumber],
     references: [stores.id],
   }),
 }))
@@ -186,4 +190,5 @@ export {
   userScopes,
 }
 
+export * from '@/db/schemas/resources/branches'
 export * from '@/db/schemas/resources/stores'
