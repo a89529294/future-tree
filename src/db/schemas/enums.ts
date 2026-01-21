@@ -20,3 +20,5 @@ export const transactionStatusEnum = pgEnum('transaction_status', [
 ])
 
 export const scopeTypeEnum = pgEnum('scope_type', ['store', 'branch'])
+
+export const roomStatusEnum = pgEnum('room_status', ['active', 'inactive'])

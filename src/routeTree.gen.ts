@@ -21,6 +21,9 @@ import { Route as AuthenticatedStoresStoreNumberEditRouteImport } from './routes
 import { Route as AuthenticatedStoresStoreNumberBranchesCreateRouteImport } from './routes/_authenticated/stores/$storeNumber/branches/create'
 import { Route as AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRouteImport } from './routes/_authenticated/stores/$storeNumber/branches/$branchNumber/index'
 import { Route as AuthenticatedStoresStoreNumberBranchesBranchNumberEditRouteImport } from './routes/_authenticated/stores/$storeNumber/branches/$branchNumber/edit'
+import { Route as AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRouteImport } from './routes/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/create'
+import { Route as AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRouteImport } from './routes/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/index'
+import { Route as AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRouteImport } from './routes/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit'
 
 const SplatRoute = SplatRouteImport.update({
   id: '/$',
@@ -87,6 +90,30 @@ const AuthenticatedStoresStoreNumberBranchesBranchNumberEditRoute =
     path: '/stores/$storeNumber/branches/$branchNumber/edit',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRoute =
+  AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRouteImport.update(
+    {
+      id: '/stores/$storeNumber/branches/$branchNumber/rooms/create',
+      path: '/stores/$storeNumber/branches/$branchNumber/rooms/create',
+      getParentRoute: () => AuthenticatedRouteRoute,
+    } as any,
+  )
+const AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRoute =
+  AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRouteImport.update(
+    {
+      id: '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/',
+      path: '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/',
+      getParentRoute: () => AuthenticatedRouteRoute,
+    } as any,
+  )
+const AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRoute =
+  AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRouteImport.update(
+    {
+      id: '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit',
+      path: '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit',
+      getParentRoute: () => AuthenticatedRouteRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -100,6 +127,9 @@ export interface FileRoutesByFullPath {
   '/stores/$storeNumber/branches/create': typeof AuthenticatedStoresStoreNumberBranchesCreateRoute
   '/stores/$storeNumber/branches/$branchNumber/edit': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberEditRoute
   '/stores/$storeNumber/branches/$branchNumber/': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRoute
+  '/stores/$storeNumber/branches/$branchNumber/rooms/create': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRoute
+  '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRoute
+  '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -113,6 +143,9 @@ export interface FileRoutesByTo {
   '/stores/$storeNumber/branches/create': typeof AuthenticatedStoresStoreNumberBranchesCreateRoute
   '/stores/$storeNumber/branches/$branchNumber/edit': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberEditRoute
   '/stores/$storeNumber/branches/$branchNumber': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRoute
+  '/stores/$storeNumber/branches/$branchNumber/rooms/create': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRoute
+  '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRoute
+  '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -128,6 +161,9 @@ export interface FileRoutesById {
   '/_authenticated/stores/$storeNumber/branches/create': typeof AuthenticatedStoresStoreNumberBranchesCreateRoute
   '/_authenticated/stores/$storeNumber/branches/$branchNumber/edit': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberEditRoute
   '/_authenticated/stores/$storeNumber/branches/$branchNumber/': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRoute
+  '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/create': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRoute
+  '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRoute
+  '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/': typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -143,6 +179,9 @@ export interface FileRouteTypes {
     | '/stores/$storeNumber/branches/create'
     | '/stores/$storeNumber/branches/$branchNumber/edit'
     | '/stores/$storeNumber/branches/$branchNumber/'
+    | '/stores/$storeNumber/branches/$branchNumber/rooms/create'
+    | '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit'
+    | '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -156,6 +195,9 @@ export interface FileRouteTypes {
     | '/stores/$storeNumber/branches/create'
     | '/stores/$storeNumber/branches/$branchNumber/edit'
     | '/stores/$storeNumber/branches/$branchNumber'
+    | '/stores/$storeNumber/branches/$branchNumber/rooms/create'
+    | '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit'
+    | '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber'
   id:
     | '__root__'
     | '/'
@@ -170,6 +212,9 @@ export interface FileRouteTypes {
     | '/_authenticated/stores/$storeNumber/branches/create'
     | '/_authenticated/stores/$storeNumber/branches/$branchNumber/edit'
     | '/_authenticated/stores/$storeNumber/branches/$branchNumber/'
+    | '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/create'
+    | '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit'
+    | '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -265,6 +310,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoresStoreNumberBranchesBranchNumberEditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/create': {
+      id: '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/create'
+      path: '/stores/$storeNumber/branches/$branchNumber/rooms/create'
+      fullPath: '/stores/$storeNumber/branches/$branchNumber/rooms/create'
+      preLoaderRoute: typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/': {
+      id: '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/'
+      path: '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber'
+      fullPath: '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/'
+      preLoaderRoute: typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit': {
+      id: '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit'
+      path: '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit'
+      fullPath: '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit'
+      preLoaderRoute: typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -277,6 +343,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStoresStoreNumberBranchesCreateRoute: typeof AuthenticatedStoresStoreNumberBranchesCreateRoute
   AuthenticatedStoresStoreNumberBranchesBranchNumberEditRoute: typeof AuthenticatedStoresStoreNumberBranchesBranchNumberEditRoute
   AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRoute: typeof AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRoute
+  AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRoute: typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRoute
+  AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRoute: typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRoute
+  AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRoute: typeof AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -293,6 +362,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedStoresStoreNumberBranchesBranchNumberEditRoute,
   AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRoute:
     AuthenticatedStoresStoreNumberBranchesBranchNumberIndexRoute,
+  AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRoute:
+    AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsCreateRoute,
+  AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRoute:
+    AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberEditRoute,
+  AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRoute:
+    AuthenticatedStoresStoreNumberBranchesBranchNumberRoomsRoomNumberIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

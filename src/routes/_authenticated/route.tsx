@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import type { FormEvent } from 'react'
 
 import { AppSidebar } from '@/components/app-sidebar'
+import { GlobalBreadcrumb } from '@/components/global-breadcrumb'
 import { Button } from '@/components/ui/button'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { countiesQueryOptions } from '@/queries/tw-address'
@@ -35,9 +36,12 @@ function AuthenticatedLayout() {
       <AppSidebar />
 
       <main className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between border-b h-16 px-4">
+        <div className="flex items-center gap-2 border-b h-16 px-4">
           <SidebarTrigger />
-          <div className="flex items-center gap-4">
+
+          <GlobalBreadcrumb />
+
+          <div className="flex items-center gap-4 ml-auto">
             <div className=" font-medium">
               {user?.firstName} {user?.lastName}
             </div>

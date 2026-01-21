@@ -39,6 +39,7 @@ function BranchCreateComponent() {
                 navigate({
                   to: '/stores/$storeNumber/branches/$branchNumber',
                   params: { storeNumber, branchNumber },
+                  search: { tab: 'info' },
                 })
               },
               onError(e) {
