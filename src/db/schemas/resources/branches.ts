@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import {
   pgSequence,
   pgTable,
@@ -9,6 +9,7 @@ import {
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import type z from 'zod'
 
+import { rooms } from './rooms'
 import { stores } from './stores'
 
 export const branchNumberSeq = pgSequence('branch_number_seq', { startWith: 1 })
@@ -16,8 +17,8 @@ export const branchNumberSeq = pgSequence('branch_number_seq', { startWith: 1 })
 // 店家
 export const branches = pgTable('branches', {
   id: uuid().defaultRandom().primaryKey(),
-  storeNumber: varchar('store_number', { length: 10 }) // 集團編號
-    .references(() => stores.storeNumber, { onDelete: 'cascade' })
+  storeId: uuid('store_id')
+    .references(() => stores.id, { onDelete: 'cascade' })
     .notNull(),
   branchNumber: varchar('branch_number', { length: 10 }) // 店家編號
     .default(sql`'ST-' || lpad(nextval('branch_number_seq')::text, 5, '0')`)
@@ -35,6 +36,10 @@ export const branches = pgTable('branches', {
     .defaultNow()
     .notNull(),
 })
+
+export const branchesRelations = relations(branches, ({ many }) => ({
+  rooms: many(rooms),
+}))
 
 export const branchSchema = createSelectSchema(branches)
 export type Branch = z.infer<typeof branchSchema>

@@ -3,6 +3,7 @@ import { relations } from 'drizzle-orm'
 import { branches } from '@/db/schemas/resources/branches'
 import { inventory } from '@/db/schemas/resources/inventory'
 import { machines } from '@/db/schemas/resources/machines'
+import { rooms } from '@/db/schemas/resources/rooms'
 import { stores } from '@/db/schemas/resources/stores'
 import { transactionItems } from '@/db/schemas/resources/transaction-items'
 import { transactions } from '@/db/schemas/resources/transactions'
@@ -61,12 +62,13 @@ export const storesRelations = relations(stores, ({ many, one }) => ({
 
 export const branchesRelations = relations(branches, ({ one, many }) => ({
   store: one(stores, {
-    fields: [branches.storeNumber],
-    references: [stores.storeNumber],
+    fields: [branches.storeId],
+    references: [stores.id],
   }),
   machines: many(machines),
   inventory: many(inventory),
   transactions: many(transactions),
+  rooms: many(rooms),
   admin: one(branchAdmins, {
     fields: [branches.id],
     references: [branchAdmins.branchId],

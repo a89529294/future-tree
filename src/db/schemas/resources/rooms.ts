@@ -1,18 +1,20 @@
+import { relations } from 'drizzle-orm'
 import { pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import type z from 'zod'
 
 import { roomStatusEnum } from '../enums'
 import { branches } from './branches'
+import { stores } from './stores'
 
 // 房間
 export const rooms = pgTable('rooms', {
   id: uuid().defaultRandom().primaryKey(),
-  storeNumber: varchar('store_number', { length: 10 })
-    .references(() => branches.storeNumber, { onDelete: 'cascade' })
+  branchId: uuid('branch_id')
+    .references(() => branches.id, { onDelete: 'cascade' })
     .notNull(),
-  branchNumber: varchar('branch_number', { length: 10 })
-    .references(() => branches.branchNumber, { onDelete: 'cascade' })
+  storeId: uuid('store_id')
+    .references(() => stores.id, { onDelete: 'cascade' })
     .notNull(),
   name: varchar('name', { length: 20 }).notNull(),
   description: varchar('description', { length: 500 }),
@@ -24,6 +26,17 @@ export const rooms = pgTable('rooms', {
     .defaultNow()
     .notNull(),
 })
+
+export const roomsRelations = relations(rooms, ({ one }) => ({
+  branch: one(branches, {
+    fields: [rooms.branchId],
+    references: [branches.id],
+  }),
+  store: one(stores, {
+    fields: [rooms.storeId],
+    references: [stores.id],
+  }),
+}))
 
 export const roomSchema = createSelectSchema(rooms)
 export type Room = z.infer<typeof roomSchema>

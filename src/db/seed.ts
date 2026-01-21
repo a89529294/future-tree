@@ -201,7 +201,7 @@ async function seed() {
     const [store1Branch1] = await db
       .insert(schema.branches)
       .values({
-        storeNumber: store1.storeNumber,
+        storeId: store1.id,
         name: 'Main Floor',
         city: '新竹縣',
         district: '湖口鄉',
@@ -213,7 +213,7 @@ async function seed() {
     const [store2Branch1] = await db
       .insert(schema.branches)
       .values({
-        storeNumber: store2.storeNumber,
+        storeId: store2.id,
         name: 'Main Branch',
         city: '新竹縣',
         district: '湖口鄉',
@@ -225,7 +225,7 @@ async function seed() {
     const [store2Branch2] = await db
       .insert(schema.branches)
       .values({
-        storeNumber: store2.storeNumber,
+        storeId: store2.id,
         name: 'Second Floor',
         city: '新竹縣',
         district: '湖口鄉',
