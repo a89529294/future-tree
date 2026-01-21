@@ -11,6 +11,7 @@ import { branchAdmins } from './branch-admins'
 import {
   machineStatusEnum,
   roleEnum,
+  roomStatusEnum,
   scopeTypeEnum,
   transactionStatusEnum,
 } from './enums'
@@ -223,6 +224,7 @@ export {
   machineStatusEnum,
   roleEnum,
   roles,
+  roomStatusEnum,
   scopeTypeEnum,
   staff,
   staffPermissions,
