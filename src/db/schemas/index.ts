@@ -235,4 +235,5 @@ export {
 }
 
 export * from '@/db/schemas/resources/branches'
+export * from '@/db/schemas/resources/rooms'
 export * from '@/db/schemas/resources/stores'
