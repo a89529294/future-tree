@@ -1,4 +1,9 @@
-import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
+import {
+  mutationOptions,
+  queryOptions,
+  useMutation,
+  useSuspenseQuery,
+} from '@tanstack/react-query'
 
 import {
   createStore,
@@ -8,15 +13,24 @@ import {
   updateStore,
 } from '@/data/stores'
 
-export const storeQueryOptions = (storeNumber: string) => ({
-  queryKey: ['stores', storeNumber],
-  queryFn: () => readStore({ data: storeNumber }),
-})
+export const storesQueryKeys = {
+  all: ['stores'] as const,
+  store: (storeNumber: string) =>
+    [...storesQueryKeys.all, storeNumber] as const,
+}
 
-export const storesQueryOptions = () => ({
-  queryKey: ['stores'],
-  queryFn: () => readStores(),
-})
+export const storeQueryOptions = (storeNumber: string) =>
+  queryOptions({
+    queryKey: storesQueryKeys.store(storeNumber),
+    queryFn: () => readStore({ data: storeNumber }),
+    enabled: !!storeNumber,
+  })
+
+export const storesQueryOptions = () =>
+  queryOptions({
+    queryKey: storesQueryKeys.all,
+    queryFn: () => readStores(),
+  })
 
 export const useStore = (storeNumber: string) =>
   useSuspenseQuery(storeQueryOptions(storeNumber))
@@ -24,19 +38,22 @@ export const useStore = (storeNumber: string) =>
 export const useStores = () => useSuspenseQuery(storesQueryOptions())
 
 export const useUpdateStore = () =>
-  useMutation({
-    mutationKey: ['stores', 'update'],
-    mutationFn: updateStore,
-  })
+  useMutation(
+    mutationOptions({
+      mutationFn: updateStore,
+    }),
+  )
 
 export const useCreateStore = () =>
-  useMutation({
-    mutationKey: ['stores', 'create'],
-    mutationFn: createStore,
-  })
+  useMutation(
+    mutationOptions({
+      mutationFn: createStore,
+    }),
+  )
 
 export const useDeleleStore = () =>
-  useMutation({
-    mutationKey: ['stores', 'delete'],
-    mutationFn: deleteStore,
-  })
+  useMutation(
+    mutationOptions({
+      mutationFn: deleteStore,
+    }),
+  )

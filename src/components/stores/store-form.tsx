@@ -28,7 +28,7 @@ type StoreFormProps =
   | {
       mode: 'new'
       initialData?: never
-      onSubmit: (store: StoreFormData) => void
+      onSubmit: (store: StoreFormData) => Promise<void>
     }
   | {
       mode: 'view'
@@ -39,7 +39,7 @@ type StoreFormProps =
       mode: 'edit'
       initialData: Store
       storeNumber: string
-      onSubmit: (store: StoreFormData) => void
+      onSubmit: (store: StoreFormData) => Promise<void>
       onDelete: () => Promise<void>
     }
 
@@ -66,10 +66,10 @@ export function StoreForm(props: StoreFormProps) {
     validators: {
       onSubmit: storeFormSchema,
     },
-    onSubmit: ({ value }) => {
+    onSubmit: async ({ value }) => {
       console.log(value)
       if (!isViewMode) {
-        props.onSubmit({
+        await props.onSubmit({
           name: value.name,
           city: value.city ? codeToName[value.city] : null,
           district: value.district,

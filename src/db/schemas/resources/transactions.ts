@@ -25,15 +25,27 @@ export const transactions = pgTable('transactions', {
     .references(() => stores.id, { onDelete: 'cascade' })
     .notNull(), // Denormalized from machine
 
-  // Payment info (will be fake for V1)
+  // ====== Payment Amounts ======
   totalAmount: decimal('total_amount', { precision: 10, scale: 2 }).notNull(),
+  amt: decimal('amt', { precision: 10, scale: 2 }),
+  taxAmt: decimal('tax_amt', { precision: 10, scale: 2 }),
+
+  // ====== Payment Status ======
   paymentStatus: transactionStatusEnum('payment_status')
     .default('pending')
     .notNull(),
-  paymentReferenceId: varchar('payment_reference_id', { length: 255 }), // For future NewebPay integration
 
-  // User info (minimal for guest checkout)
-  userIpAddress: varchar('user_ip_address', { length: 45 }), // IPv6 support
+  // ====== NewebPay Response Fields ======
+  newebpayTradeNo: varchar('newebpay_trade_no', { length: 50 }),
+  newebpayPaymentType: varchar('newebpay_payment_type', { length: 20 }),
+  newebpayPayTime: timestamp('newebpay_pay_time', { withTimezone: true }),
+  newebpayIp: varchar('newebpay_ip', { length: 45 }),
+
+  // ====== Invoice Linkage ======
+  invoiceId: uuid('invoice_id'),
+
+  // ====== User Info (minimal for guest checkout) ======
+  userIpAddress: varchar('user_ip_address', { length: 45 }),
   userAgent: text('user_agent'),
 
   createdAt: timestamp('created_at', { withTimezone: true })

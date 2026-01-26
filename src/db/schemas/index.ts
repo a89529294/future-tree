@@ -2,6 +2,7 @@ import { relations } from 'drizzle-orm'
 
 import { branches } from '@/db/schemas/resources/branches'
 import { inventory } from '@/db/schemas/resources/inventory'
+import { invoices } from '@/db/schemas/resources/invoices'
 import { machines } from '@/db/schemas/resources/machines'
 import { rooms } from '@/db/schemas/resources/rooms'
 import { stores } from '@/db/schemas/resources/stores'
@@ -10,6 +11,7 @@ import { transactions } from '@/db/schemas/resources/transactions'
 
 import { branchAdmins } from './branch-admins'
 import {
+  invoiceStatusEnum,
   machineStatusEnum,
   roleEnum,
   roomStatusEnum,
@@ -54,6 +56,7 @@ export const storesRelations = relations(stores, ({ many, one }) => ({
   machines: many(machines),
   inventory: many(inventory),
   transactions: many(transactions),
+  invoices: many(invoices),
   admin: one(storeAdmins, {
     fields: [stores.id],
     references: [storeAdmins.storeId],
@@ -68,10 +71,22 @@ export const branchesRelations = relations(branches, ({ one, many }) => ({
   machines: many(machines),
   inventory: many(inventory),
   transactions: many(transactions),
+  invoices: many(invoices),
   rooms: many(rooms),
   admin: one(branchAdmins, {
     fields: [branches.id],
     references: [branchAdmins.branchId],
+  }),
+}))
+
+export const roomsRelations = relations(rooms, ({ one }) => ({
+  branch: one(branches, {
+    fields: [rooms.branchId],
+    references: [branches.id],
+  }),
+  store: one(stores, {
+    fields: [rooms.storeId],
+    references: [stores.id],
   }),
 }))
 
@@ -119,8 +134,27 @@ export const transactionsRelations = relations(
       references: [stores.id],
     }),
     items: many(transactionItems),
+    invoice: one(invoices, {
+      fields: [transactions.invoiceId],
+      references: [invoices.id],
+    }),
   }),
 )
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  store: one(stores, {
+    fields: [invoices.storeId],
+    references: [stores.id],
+  }),
+  branch: one(branches, {
+    fields: [invoices.branchId],
+    references: [branches.id],
+  }),
+  transaction: one(transactions, {
+    fields: [invoices.transactionId],
+    references: [transactions.id],
+  }),
+}))
 
 export const transactionItemsRelations = relations(
   transactionItems,
@@ -221,6 +255,8 @@ export {
   branchAdmins,
   branches,
   inventory,
+  invoices,
+  invoiceStatusEnum,
   loggedInStaff,
   machines,
   machineStatusEnum,

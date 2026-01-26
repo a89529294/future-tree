@@ -67,13 +67,13 @@ function BranchDetailComponent() {
           className={cn(
             'mt-6',
             branchNumber !== deferredBranchNumber
-              ? 'opacity-50 transition-opacity'
+              ? 'opacity-50 transition-opacity delay-100'
               : '',
           )}
         >
           <TabsContent value="info">
             <BranchForm
-              key={branch.id}
+              // key={branch.id}
               initialData={branch}
               mode={'view'}
               storeNumber={storeNumber}

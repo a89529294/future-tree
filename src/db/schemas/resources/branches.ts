@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm'
 import {
+  boolean,
   pgSequence,
   pgTable,
   timestamp,
@@ -7,7 +8,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
-import type z from 'zod'
+import type { z } from 'zod'
 
 import { rooms } from './rooms'
 import { stores } from './stores'
@@ -29,6 +30,22 @@ export const branches = pgTable('branches', {
   district: varchar('district', { length: 10 }).notNull(),
   address: varchar('address', { length: 100 }).notNull(),
   phoneNumber: varchar('phone_number', { length: 20 }),
+
+  // ====== NewebPay Payment Settings ======
+  paymentMerchantId: varchar('payment_merchant_id', { length: 50 }),
+  paymentHashKey: varchar('payment_hash_key', { length: 64 }),
+  paymentHashIv: varchar('payment_hash_iv', { length: 32 }),
+  isPaymentEnabled: boolean('is_payment_enabled').default(false).notNull(),
+
+  // ====== ezPay Invoice Settings ======
+  invoiceMerchantId: varchar('invoice_merchant_id', { length: 50 }),
+  invoiceHashKey: varchar('invoice_hash_key', { length: 64 }),
+  invoiceHashIv: varchar('invoice_hash_iv', { length: 32 }),
+  isInvoiceEnabled: boolean('is_invoice_enabled').default(false).notNull(),
+
+  // ====== Invoice Donation Settings ======
+  defaultLoveCode: varchar('default_love_code', { length: 7 }),
+
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -54,12 +71,37 @@ export const branchFormSchema = createInsertSchema(branches, {
   address: (schema) =>
     schema.trim().min(1, '地址為必填欄位').max(100, '地址不能超過100字'),
   phoneNumber: (schema) => schema.trim().max(20, '電話號碼不能超過20字'),
+  paymentMerchantId: (schema) =>
+    schema.trim().max(50, 'Merchant ID 不能超過50字').nullable(),
+  paymentHashKey: (schema) =>
+    schema.trim().max(64, 'Hash Key 不能超過64字').nullable(),
+  paymentHashIv: (schema) =>
+    schema.trim().max(32, 'Hash IV 不能超過32字').nullable(),
+  invoiceMerchantId: (schema) =>
+    schema.trim().max(50, 'Merchant ID 不能超過50字').nullable(),
+  invoiceHashKey: (schema) =>
+    schema.trim().max(64, 'Hash Key 不能超過64字').nullable(),
+  invoiceHashIv: (schema) =>
+    schema.trim().max(32, 'Hash IV 不能超過32字').nullable(),
+  defaultLoveCode: (schema) =>
+    schema.trim().max(7, '愛心碼不能超過7字').nullable(),
+  isPaymentEnabled: (schema) => schema.default(false).nonoptional(),
+  isInvoiceEnabled: (schema) => schema.default(false).nonoptional(),
 }).pick({
   name: true,
   city: true,
   district: true,
   address: true,
   phoneNumber: true,
+  paymentMerchantId: true,
+  paymentHashKey: true,
+  paymentHashIv: true,
+  isPaymentEnabled: true,
+  invoiceMerchantId: true,
+  invoiceHashKey: true,
+  invoiceHashIv: true,
+  isInvoiceEnabled: true,
+  defaultLoveCode: true,
 })
 
 export type BranchFormData = z.infer<typeof branchFormSchema>

@@ -41,7 +41,7 @@ export const createMachine = createServerFn({ method: 'POST' })
         .values({
           ...formData,
           branchId: branch.id,
-          storeId: branch.storeNumber,
+          storeId: branch.storeId,
         })
         .returning()
 

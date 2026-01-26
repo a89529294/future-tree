@@ -1,5 +1,11 @@
-import { relations } from 'drizzle-orm'
-import { pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import {
+  pgSequence,
+  pgTable,
+  timestamp,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import type z from 'zod'
 
@@ -7,15 +13,21 @@ import { roomStatusEnum } from '../enums'
 import { branches } from './branches'
 import { stores } from './stores'
 
+export const roomNumberSeq = pgSequence('room_number_seq', { startWith: 1 })
+
 // 房間
 export const rooms = pgTable('rooms', {
   id: uuid().defaultRandom().primaryKey(),
-  branchId: uuid('branch_id')
-    .references(() => branches.id, { onDelete: 'cascade' })
-    .notNull(),
   storeId: uuid('store_id')
     .references(() => stores.id, { onDelete: 'cascade' })
     .notNull(),
+  branchId: uuid('branch_id')
+    .references(() => branches.id, { onDelete: 'cascade' })
+    .notNull(),
+  roomNumber: varchar('room_number', { length: 15 })
+    .default(sql`'RM-' || lpad(nextval('room_number_seq')::text, 6, '0')`)
+    .notNull()
+    .unique(),
   name: varchar('name', { length: 20 }).notNull(),
   description: varchar('description', { length: 500 }),
   status: roomStatusEnum('status').default('active').notNull(),
@@ -26,17 +38,6 @@ export const rooms = pgTable('rooms', {
     .defaultNow()
     .notNull(),
 })
-
-export const roomsRelations = relations(rooms, ({ one }) => ({
-  branch: one(branches, {
-    fields: [rooms.branchId],
-    references: [branches.id],
-  }),
-  store: one(stores, {
-    fields: [rooms.storeId],
-    references: [stores.id],
-  }),
-}))
 
 export const roomSchema = createSelectSchema(rooms)
 export type Room = z.infer<typeof roomSchema>

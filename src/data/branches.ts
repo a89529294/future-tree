@@ -27,16 +27,21 @@ const createBranch = createServerFn({ method: 'POST' })
         const user = await requireAuth()
         requirePermission(user, 'branches.create')
 
+        const { storeNumber, ...rest } = data
+
         const store = await db.query.stores.findFirst({
-          where: eq(stores.storeNumber, data.storeNumber),
+          where: eq(stores.storeNumber, storeNumber),
         })
         if (!store) {
-          throw new NotFoundError('store', data.storeNumber)
+          throw new NotFoundError('store', storeNumber)
         }
 
         requireAccessStore(user, store)
 
-        const [newBranch] = await db.insert(branches).values(data).returning()
+        const [newBranch] = await db
+          .insert(branches)
+          .values({ ...rest, storeId: store.id })
+          .returning()
 
         return newBranch
       }),
@@ -45,23 +50,26 @@ const createBranch = createServerFn({ method: 'POST' })
   )
 
 const readBranch = createServerFn()
-  .inputValidator((branchId: string) => branchId)
+  .inputValidator((branchNumber: string) => branchNumber)
   .handler(
-    withDbErrors(async ({ data }) => {
-      const user = await requireAuth()
-      requirePermission(user, 'branches.read')
+    withDbErrors(
+      withSleepInDev(async ({ data }) => {
+        const user = await requireAuth()
+        requirePermission(user, 'branches.read')
 
-      const branch = await db.query.branches.findFirst({
-        where: eq(branches.branchNumber, data),
-      })
-      if (!branch) {
-        throw new NotFoundError('branch', data)
-      }
+        const branch = await db.query.branches.findFirst({
+          where: eq(branches.branchNumber, data),
+        })
+        if (!branch) {
+          throw new NotFoundError('branch', data)
+        }
 
-      requireAccessBranch(user, branch)
+        requireAccessBranch(user, branch)
 
-      return branch
-    }, 'Read branch failed:'),
+        return branch
+      }),
+      'Read branch failed:',
+    ),
   )
 
 const readBranches = createServerFn().handler(
@@ -82,7 +90,7 @@ const readBranches = createServerFn().handler(
 
       if (user.scopeType === 'store') {
         return await db.query.branches.findMany({
-          where: inArray(branches.storeNumber, user.scopes),
+          where: inArray(branches.storeId, user.scopes),
           with: {
             store: {
               columns: { name: true, storeNumber: true },

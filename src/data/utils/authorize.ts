@@ -7,6 +7,7 @@ type ResourceType =
   | 'global'
   | 'store'
   | 'branch'
+  | 'room'
   | 'machine'
   | 'inventory'
   | 'transaction'
@@ -71,7 +72,7 @@ export function canAccessBranch(user: SessionUser, branch: Branch): boolean {
   }
 
   if (user.scopeType === 'store') {
-    return user.scopes.includes(branch.storeNumber)
+    return user.scopes.includes(branch.storeId)
   }
 
   return user.scopes.includes(branch.branchNumber)
@@ -93,6 +94,8 @@ export function requireAccessBranch(user: SessionUser, branch: Branch) {
 }
 
 export function requirePermission(user: SessionUser, permission: Permission) {
+  if (user.scopeType === 'global') return
+
   const hasPermission = user.permissions.includes(permission)
 
   if (!hasPermission) throw new PermissionError(permission)

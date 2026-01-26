@@ -23,6 +23,7 @@ async function seed() {
     await db.delete(schema.transactions)
     await db.delete(schema.inventory)
     await db.delete(schema.machines)
+    await db.delete(schema.rooms)
     await db.delete(schema.branches)
     await db.delete(schema.stores)
     await db.delete(schema.userScopes)
@@ -236,7 +237,74 @@ async function seed() {
 
     console.log('Branches created successfully')
 
-    // 6. Grant scopes using unified userScopes table
+    // 6. Create rooms for each branch
+    console.log('Creating rooms...')
+
+    // Rooms for store1Branch1 (Main Floor)
+    await db.insert(schema.rooms).values({
+      branchId: store1Branch1.id,
+      storeId: store1.id,
+      name: 'A區',
+      description: '主要營業區',
+      status: 'active',
+    })
+    await db.insert(schema.rooms).values({
+      branchId: store1Branch1.id,
+      storeId: store1.id,
+      name: 'B區',
+      description: '休息區',
+      status: 'active',
+    })
+    await db.insert(schema.rooms).values({
+      branchId: store1Branch1.id,
+      storeId: store1.id,
+      name: 'C區',
+      description: 'VIP區',
+      status: 'active',
+    })
+
+    // Rooms for store2Branch1 (Main Branch)
+    await db.insert(schema.rooms).values({
+      branchId: store2Branch1.id,
+      storeId: store2.id,
+      name: '一樓',
+      description: '一樓營業區',
+      status: 'active',
+    })
+    await db.insert(schema.rooms).values({
+      branchId: store2Branch1.id,
+      storeId: store2.id,
+      name: '二樓',
+      description: '二樓營業區',
+      status: 'active',
+    })
+
+    // Rooms for store2Branch2 (Second Floor)
+    await db.insert(schema.rooms).values({
+      branchId: store2Branch2.id,
+      storeId: store2.id,
+      name: '北區',
+      description: '北側營業區',
+      status: 'active',
+    })
+    await db.insert(schema.rooms).values({
+      branchId: store2Branch2.id,
+      storeId: store2.id,
+      name: '南區',
+      description: '南側營業區',
+      status: 'active',
+    })
+    await db.insert(schema.rooms).values({
+      branchId: store2Branch2.id,
+      storeId: store2.id,
+      name: '東區',
+      description: '東側營業區',
+      status: 'active',
+    })
+
+    console.log('Rooms created successfully')
+
+    // 7. Grant scopes using unified userScopes table
     console.log('Granting user scopes...')
 
     // Store admin 1 gets store-level scope for store 1

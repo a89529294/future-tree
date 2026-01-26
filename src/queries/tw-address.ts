@@ -1,5 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 
+export const twAddressQueryKeys = {
+  all: ['tw-address'] as const,
+  counties: () => [...twAddressQueryKeys.all, 'counties'] as const,
+  districts: (countycode: string | null) =>
+    countycode
+      ? ([...twAddressQueryKeys.all, 'districts', countycode] as const)
+      : ([...twAddressQueryKeys.all, 'districts'] as const),
+}
+
 const nameToCode: Record<string, string> = {
   臺北市: 'A',
   臺中市: 'B',
@@ -26,7 +35,7 @@ const nameToCode: Record<string, string> = {
 }
 
 export const countiesQueryOptions = {
-  queryKey: ['counties'],
+  queryKey: twAddressQueryKeys.counties(),
   queryFn: async () => {
     const response = await fetch('https://api.nlsc.gov.tw/other/ListCounty')
 
@@ -57,7 +66,7 @@ export function useCounties() {
 
 export function useDistricts(countycode: string | null) {
   return useQuery({
-    queryKey: ['towns', countycode],
+    queryKey: twAddressQueryKeys.districts(countycode),
     queryFn: async () => {
       await new Promise((r) => setTimeout(r, 5000))
       const response = await fetch(

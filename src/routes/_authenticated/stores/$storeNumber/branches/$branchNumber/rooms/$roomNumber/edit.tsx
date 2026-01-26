@@ -1,20 +1,11 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { toast } from 'sonner'
 
 import { PendingComponent } from '@/components/pending-component'
 import { ResourceErrorComponent } from '@/components/resource-error-component'
+import { roomsQueryKeys, useRoom, useUpdateRoom } from '@/queries/rooms'
 import { RoomForm } from '@/routes/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/-components/room-form'
-
-// Dummy data fetching - in real app this would use a hook
-const DUMMY_ROOM = {
-  id: 'RM-00001',
-  name: 'Room 101',
-  description: 'Standard room with basic amenities',
-  status: 'active' as const,
-  storeNumber: 'ST-001',
-  branchNumber: 'BR-001',
-  createdAt: new Date(),
-  updatedAt: new Date(),
-}
 
 export const Route = createFileRoute(
   '/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber/edit',
@@ -26,6 +17,9 @@ export const Route = createFileRoute(
 
 function RoomEditComponent() {
   const { storeNumber, branchNumber, roomNumber } = Route.useParams()
+  const { data } = useRoom(roomNumber)
+  const { mutateAsync: updateRoom } = useUpdateRoom()
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   return (
@@ -38,17 +32,34 @@ function RoomEditComponent() {
 
       <RoomForm
         mode="edit"
-        initialData={DUMMY_ROOM}
+        initialData={data}
         storeNumber={storeNumber}
         branchNumber={branchNumber}
         roomNumber={roomNumber}
-        onSubmit={(data) => {
-          console.log('Update room:', data)
-          // Dummy navigation back to room view
-          navigate({
-            to: '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber',
-            params: { storeNumber, branchNumber, roomNumber },
-          })
+        onSubmit={async (updateData) => {
+          try {
+            await updateRoom({
+              data: {
+                ...updateData,
+                roomNumber,
+              },
+            })
+
+            toast.success('更新房間成功')
+            queryClient.invalidateQueries({
+              queryKey: roomsQueryKeys.branch(branchNumber),
+            })
+            queryClient.invalidateQueries({
+              queryKey: roomsQueryKeys.room(roomNumber),
+            })
+            navigate({
+              to: '/stores/$storeNumber/branches/$branchNumber/rooms/$roomNumber',
+              params: { storeNumber, branchNumber, roomNumber },
+            })
+          } catch (error) {
+            const message = error instanceof Error ? error.message : '未知錯誤'
+            toast.error(`更新房間失敗: ${message}`)
+          }
         }}
       />
     </div>

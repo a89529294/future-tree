@@ -1,4 +1,9 @@
-import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
+import {
+  mutationOptions,
+  queryOptions,
+  useMutation,
+  useSuspenseQuery,
+} from '@tanstack/react-query'
 
 import {
   createBranch,
@@ -7,28 +12,39 @@ import {
   updateBranch,
 } from '@/data/branches'
 
-export const branchQueryOptions = (branchId: string) => ({
-  queryKey: ['branches', branchId],
-  queryFn: () => readBranch({ data: branchId }),
-})
-export const branchesQueryOptions = () => ({
-  queryKey: ['branches'],
-  queryFn: () => readBranches(),
-})
+export const branchesQueryKeys = {
+  all: ['branches'] as const,
+  branch: (branchNumber: string) =>
+    [...branchesQueryKeys.all, branchNumber] as const,
+}
 
-export const useBranch = (branchId: string) =>
-  useSuspenseQuery(branchQueryOptions(branchId))
+export const branchQueryOptions = (branchNumber: string) =>
+  queryOptions({
+    queryKey: branchesQueryKeys.branch(branchNumber),
+    queryFn: () => readBranch({ data: branchNumber }),
+  })
+
+export const branchesQueryOptions = () =>
+  queryOptions({
+    queryKey: branchesQueryKeys.all,
+    queryFn: () => readBranches(),
+  })
+
+export const useBranch = (branchNumber: string) =>
+  useSuspenseQuery(branchQueryOptions(branchNumber))
 
 export const useBranches = () => useSuspenseQuery(branchesQueryOptions())
 
 export const useUpdateBranch = () =>
-  useMutation({
-    mutationKey: ['branches', 'update'],
-    mutationFn: updateBranch,
-  })
+  useMutation(
+    mutationOptions({
+      mutationFn: updateBranch,
+    }),
+  )
 
 export const useCreateBranch = () =>
-  useMutation({
-    mutationKey: ['branches', 'create'],
-    mutationFn: createBranch,
-  })
+  useMutation(
+    mutationOptions({
+      mutationFn: createBranch,
+    }),
+  )

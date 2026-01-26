@@ -28,7 +28,7 @@ type RoomFormProps =
       initialData?: never
       storeNumber: string
       branchNumber: string
-      onSubmit: (room: RoomFormData) => void
+      onSubmit: (room: RoomFormData) => Promise<void>
     }
   | {
       mode: 'view'
@@ -43,7 +43,7 @@ type RoomFormProps =
       storeNumber: string
       branchNumber: string
       roomNumber: string
-      onSubmit: (room: RoomFormData) => void
+      onSubmit: (room: RoomFormData) => Promise<void>
     }
 
 export function RoomForm(props: RoomFormProps) {
@@ -64,14 +64,16 @@ export function RoomForm(props: RoomFormProps) {
     validators: {
       onSubmit: roomFormSchema,
     },
-    onSubmit: ({ value }) => {
+    onSubmit: async ({ value }) => {
       if (!isViewMode) {
-        props.onSubmit(value)
+        await props.onSubmit(value)
       }
     },
   })
 
   const isSubmitting = useStore(form.store, (state) => state.isSubmitting)
+
+  console.log(isSubmitting)
 
   return (
     <Card className="max-w-2xl mx-auto">

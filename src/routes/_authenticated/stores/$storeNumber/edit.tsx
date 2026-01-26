@@ -7,7 +7,12 @@ import { PendingComponent } from '@/components/pending-component'
 import { ResourceErrorComponent } from '@/components/resource-error-component'
 import { StoreForm } from '@/components/stores/store-form'
 import type { StoreFormData } from '@/db/schemas'
-import { useDeleleStore, useStore, useUpdateStore } from '@/queries/stores'
+import {
+  storesQueryKeys,
+  useDeleleStore,
+  useStore,
+  useUpdateStore,
+} from '@/queries/stores'
 
 export const Route = createFileRoute(
   '/_authenticated/stores/$storeNumber/edit',
@@ -23,7 +28,7 @@ function StoreEditComponent() {
   const navigate = Route.useNavigate()
   const deferredStoreNumber = useDeferredValue(storeNumber)
   const { data: initialData } = useStore(deferredStoreNumber)
-  const { mutate, isPending } = useUpdateStore()
+  const { mutateAsync: updateStore } = useUpdateStore()
   const { mutateAsync: deleteStore } = useDeleleStore()
 
   return (
@@ -31,45 +36,43 @@ function StoreEditComponent() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">編輯集團</h1>
       </div>
-      <div className={isPending ? 'opacity-50 transition-opacity' : ''}>
+      <div>
         <StoreForm
           initialData={initialData}
           mode={'edit'}
           storeNumber={storeNumber}
-          onSubmit={(store: StoreFormData) =>
-            mutate(
-              {
+          onSubmit={async (store: StoreFormData) => {
+            try {
+              const { name } = await updateStore({
                 data: {
                   storeNumber,
                   ...store,
                 },
-              },
-              {
-                onSuccess({ name }) {
-                  toast.success(`編輯 ${name} 成功`)
-                  queryClient.invalidateQueries({
-                    queryKey: ['stores'],
-                  })
-                },
-                onError({ message }) {
-                  toast.error(`編輯失敗 ${message}`)
-                },
-              },
-            )
-          }
+              })
+
+              toast.success(`編輯 ${name} 成功`)
+              queryClient.invalidateQueries({
+                queryKey: storesQueryKeys.all,
+              })
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : '未知錯誤'
+              toast.error(`編輯失敗 ${message}`)
+            }
+          }}
           onDelete={async () => {
-            await deleteStore(
-              { data: storeNumber },
-              {
-                onSuccess() {
-                  navigate({ to: '/dashboard' })
-                  queryClient.invalidateQueries({ queryKey: ['stores'] })
-                },
-                onError({ message }) {
-                  toast.error(`刪除失敗 ${message}`)
-                },
-              },
-            )
+            try {
+              await deleteStore({ data: storeNumber })
+
+              navigate({ to: '/dashboard' })
+              queryClient.invalidateQueries({
+                queryKey: storesQueryKeys.all,
+              })
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : '未知錯誤'
+              toast.error(`刪除失敗 ${message}`)
+            }
           }}
         />
       </div>

@@ -1,7 +1,11 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { toast } from 'sonner'
 
 import { PendingComponent } from '@/components/pending-component'
 import { ResourceErrorComponent } from '@/components/resource-error-component'
+import { useBranch } from '@/queries/branches'
+import { roomsQueryKeys, useCreateRoom } from '@/queries/rooms'
 import { RoomForm } from '@/routes/_authenticated/stores/$storeNumber/branches/$branchNumber/rooms/-components/room-form'
 
 export const Route = createFileRoute(
@@ -14,6 +18,9 @@ export const Route = createFileRoute(
 
 function RoomNewComponent() {
   const { storeNumber, branchNumber } = Route.useParams()
+  const { data: branch } = useBranch(branchNumber)
+  const { mutateAsync: createRoom } = useCreateRoom()
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   return (
@@ -28,14 +35,29 @@ function RoomNewComponent() {
         mode="new"
         storeNumber={storeNumber}
         branchNumber={branchNumber}
-        onSubmit={(data) => {
-          console.log('Create room:', data)
-          // Dummy navigation back to rooms tab
-          navigate({
-            to: '/stores/$storeNumber/branches/$branchNumber',
-            params: { storeNumber, branchNumber },
-            search: { tab: 'rooms' },
-          })
+        onSubmit={async (data) => {
+          try {
+            await createRoom({
+              data: {
+                ...data,
+                branchId: branch.id,
+                storeId: branch.storeId,
+              },
+            })
+
+            toast.success('建立房間成功')
+            queryClient.invalidateQueries({
+              queryKey: roomsQueryKeys.branch(branchNumber),
+            })
+            navigate({
+              to: '/stores/$storeNumber/branches/$branchNumber',
+              params: { storeNumber, branchNumber },
+              search: { tab: 'rooms' },
+            })
+          } catch (error) {
+            const message = error instanceof Error ? error.message : '未知錯誤'
+            toast.error(`建立房間失敗: ${message}`)
+          }
         }}
       />
     </div>

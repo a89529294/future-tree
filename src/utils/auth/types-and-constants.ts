@@ -41,6 +41,12 @@ export const ALL_PERMISSIONS = [
   'branches.update',
   'branches.delete',
 
+  // Rooms
+  'rooms.create',
+  'rooms.read',
+  'rooms.update',
+  'rooms.delete',
+
   // Machines
   'machines.create',
   'machines.read',

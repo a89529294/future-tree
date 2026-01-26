@@ -11,6 +11,9 @@ import {
 } from '@/components/ui/breadcrumb'
 import { readBranch } from '@/data/branches'
 import { readStore } from '@/data/stores'
+import { branchQueryOptions } from '@/queries/branches'
+import { roomQueryOptions } from '@/queries/rooms'
+import { storeQueryOptions } from '@/queries/stores'
 
 export function GlobalBreadcrumb() {
   const storeView = useMatch({
@@ -76,17 +79,11 @@ export function GlobalBreadcrumb() {
   const roomNumber =
     roomView?.params.roomNumber || roomEdit?.params.roomNumber || ''
 
-  const { data: store } = useQuery({
-    queryKey: ['store', storeNumber],
-    queryFn: () => readStore({ data: storeNumber }),
-    enabled: !!storeNumber,
-  })
+  const { data: store } = useQuery(storeQueryOptions(storeNumber))
 
-  const { data: branch } = useQuery({
-    queryKey: ['branch', branchNumber],
-    queryFn: () => readBranch({ data: branchNumber }),
-    enabled: !!branchNumber,
-  })
+  const { data: branch } = useQuery(branchQueryOptions(branchNumber))
+
+  const { data: room } = useQuery(roomQueryOptions(roomNumber))
 
   const renderBreadcrumbs = () => {
     const items = [{ label: '首頁', href: '/', isCurrent: false }]
@@ -120,7 +117,9 @@ export function GlobalBreadcrumb() {
         href: `/stores/${storeNumber}/branches/${branchNumber}`,
         isCurrent: false,
       })
-      const roomName = roomCreate ? '建立房間' : roomNumber || '房間'
+      const roomName = roomCreate
+        ? '建立房間'
+        : room?.name || roomNumber || '房間'
       items.push({ label: roomName, href: '', isCurrent: true })
     }
 

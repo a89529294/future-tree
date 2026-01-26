@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
-import { useCreateBranch } from '@/queries/branches'
+import { branchesQueryKeys, useCreateBranch } from '@/queries/branches'
 
 import { BranchForm } from './-components/branch-form'
 
@@ -15,7 +15,7 @@ export const Route = createFileRoute(
 function BranchCreateComponent() {
   const queryClient = useQueryClient()
   const { storeNumber } = Route.useParams()
-  const createBranch = useCreateBranch()
+  const { mutateAsync: createBranch } = useCreateBranch()
   const navigate = useNavigate()
 
   return (
@@ -27,26 +27,23 @@ function BranchCreateComponent() {
       <BranchForm
         mode={'new'}
         storeNumber={storeNumber}
-        onSubmit={(data) => {
-          createBranch.mutateAsync(
-            {
-              data: { storeNumber, ...data },
-            },
-            {
-              onSuccess({ name, branchNumber }) {
-                toast.success(`成功新增 ${name}`)
-                queryClient.invalidateQueries({ queryKey: ['branches'] })
-                navigate({
-                  to: '/stores/$storeNumber/branches/$branchNumber',
-                  params: { storeNumber, branchNumber },
-                  search: { tab: 'info' },
-                })
-              },
-              onError(e) {
-                toast.warning(e.message)
-              },
-            },
-          )
+        onSubmit={async (data) => {
+          try {
+            const { name, branchNumber } = await createBranch({
+              data,
+            })
+
+            toast.success(`成功新增 ${name}`)
+            queryClient.invalidateQueries({ queryKey: branchesQueryKeys.all })
+            navigate({
+              to: '/stores/$storeNumber/branches/$branchNumber',
+              params: { storeNumber, branchNumber },
+              search: { tab: 'info' },
+            })
+          } catch (error) {
+            const message = error instanceof Error ? error.message : '未知錯誤'
+            toast.warning(message)
+          }
         }}
       />
     </div>

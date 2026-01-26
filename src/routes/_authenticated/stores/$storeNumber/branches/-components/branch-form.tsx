@@ -1,4 +1,5 @@
 import { useForm, useStore } from '@tanstack/react-form'
+import { useRef } from 'react'
 
 import { RouterLink } from '@/components/router-link'
 import { Button } from '@/components/ui/button'
@@ -18,7 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
+import { Switch } from '@/components/ui/switch'
 import type { Branch, BranchFormData } from '@/db/schemas/resources/branches'
 import { branchFormSchema } from '@/db/schemas/resources/branches'
 import { useCounties, useDistricts } from '@/queries/tw-address'
@@ -28,7 +31,7 @@ type BranchFormProps =
       mode: 'new'
       initialData?: never
       storeNumber: string
-      onSubmit: (branch: BranchFormData) => void
+      onSubmit: (branch: BranchFormData & { storeNumber: string }) => void
     }
   | {
       mode: 'view'
@@ -48,6 +51,7 @@ export function BranchForm(props: BranchFormProps) {
   const isViewMode = props.mode === 'view'
 
   const { queryResult: countiesQuery, nameToCode, codeToName } = useCounties()
+
   const form = useForm({
     defaultValues: props.initialData
       ? {
@@ -58,6 +62,15 @@ export function BranchForm(props: BranchFormProps) {
           district: props.initialData.district,
           address: props.initialData.address,
           phoneNumber: props.initialData.phoneNumber,
+          paymentMerchantId: props.initialData.paymentMerchantId,
+          paymentHashKey: props.initialData.paymentHashKey,
+          paymentHashIv: props.initialData.paymentHashIv,
+          isPaymentEnabled: props.initialData.isPaymentEnabled,
+          invoiceMerchantId: props.initialData.invoiceMerchantId,
+          invoiceHashKey: props.initialData.invoiceHashKey,
+          invoiceHashIv: props.initialData.invoiceHashIv,
+          isInvoiceEnabled: props.initialData.isInvoiceEnabled,
+          defaultLoveCode: props.initialData.defaultLoveCode,
         }
       : {
           name: '',
@@ -65,6 +78,15 @@ export function BranchForm(props: BranchFormProps) {
           district: '',
           address: '',
           phoneNumber: null,
+          paymentMerchantId: null,
+          paymentHashKey: null,
+          paymentHashIv: null,
+          isPaymentEnabled: false,
+          invoiceMerchantId: null,
+          invoiceHashKey: null,
+          invoiceHashIv: null,
+          isInvoiceEnabled: false,
+          defaultLoveCode: null,
         },
     validators: {
       onSubmit: branchFormSchema,
@@ -78,10 +100,21 @@ export function BranchForm(props: BranchFormProps) {
           district: value.district,
           address: value.address,
           phoneNumber: value.phoneNumber,
+          paymentMerchantId: value.paymentMerchantId,
+          paymentHashKey: value.paymentHashKey,
+          paymentHashIv: value.paymentHashIv,
+          isPaymentEnabled: value.isPaymentEnabled,
+          invoiceMerchantId: value.invoiceMerchantId,
+          invoiceHashKey: value.invoiceHashKey,
+          invoiceHashIv: value.invoiceHashIv,
+          isInvoiceEnabled: value.isInvoiceEnabled,
+          defaultLoveCode: value.defaultLoveCode,
+          storeNumber: props.storeNumber,
         })
       }
     },
   })
+
   const selectedCity = useStore(form.store, (state) => state.values.city)
   const countyCode = selectedCity
   const districtsQuery = useDistricts(countyCode)
@@ -126,7 +159,7 @@ export function BranchForm(props: BranchFormProps) {
                 value={
                   props.mode === 'new'
                     ? props.storeNumber
-                    : props.initialData.storeNumber
+                    : props.initialData.storeId
                 }
                 disabled
                 className="bg-muted opacity-50 cursor-not-allowed"
@@ -317,6 +350,166 @@ export function BranchForm(props: BranchFormProps) {
                 )
               }}
             />
+          </div>
+
+          <Separator className="my-6" />
+
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">藍新金流設定 (NewebPay)</h3>
+                <form.Field
+                  name="isPaymentEnabled"
+                  children={(field) => (
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id={field.name}
+                        checked={field.state.value}
+                        onCheckedChange={field.handleChange}
+                        disabled={isViewMode || isSubmitting}
+                      />
+                      <FieldLabel htmlFor={field.name}>啟用付款</FieldLabel>
+                    </div>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form.Field
+                  name="paymentMerchantId"
+                  children={(field) => (
+                    <Field className="space-y-1">
+                      <FieldLabel htmlFor={field.name}>Merchant ID</FieldLabel>
+                      <Input
+                        id={field.name}
+                        value={field.state.value ?? ''}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        disabled={isViewMode || isSubmitting}
+                      />
+                    </Field>
+                  )}
+                />
+                <form.Field
+                  name="paymentHashKey"
+                  children={(field) => (
+                    <Field className="space-y-1">
+                      <FieldLabel htmlFor={field.name}>Hash Key</FieldLabel>
+                      <Input
+                        id={field.name}
+                        value={field.state.value ?? ''}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        disabled={isViewMode || isSubmitting}
+                      />
+                    </Field>
+                  )}
+                />
+                <form.Field
+                  name="paymentHashIv"
+                  children={(field) => (
+                    <Field className="space-y-1">
+                      <FieldLabel htmlFor={field.name}>Hash IV</FieldLabel>
+                      <Input
+                        id={field.name}
+                        value={field.state.value ?? ''}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        disabled={isViewMode || isSubmitting}
+                      />
+                    </Field>
+                  )}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">
+                  ezPay 電子發票設定 (ezPay)
+                </h3>
+                <form.Field
+                  name="isInvoiceEnabled"
+                  children={(field) => (
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id={field.name}
+                        checked={field.state.value}
+                        onCheckedChange={field.handleChange}
+                        disabled={isViewMode || isSubmitting}
+                      />
+                      <FieldLabel htmlFor={field.name}>啟用發票</FieldLabel>
+                    </div>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form.Field
+                  name="invoiceMerchantId"
+                  children={(field) => (
+                    <Field className="space-y-1">
+                      <FieldLabel htmlFor={field.name}>Merchant ID</FieldLabel>
+                      <Input
+                        id={field.name}
+                        value={field.state.value ?? ''}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        disabled={isViewMode || isSubmitting}
+                      />
+                    </Field>
+                  )}
+                />
+                <form.Field
+                  name="invoiceHashKey"
+                  children={(field) => (
+                    <Field className="space-y-1">
+                      <FieldLabel htmlFor={field.name}>Hash Key</FieldLabel>
+                      <Input
+                        id={field.name}
+                        value={field.state.value ?? ''}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        disabled={isViewMode || isSubmitting}
+                      />
+                    </Field>
+                  )}
+                />
+                <form.Field
+                  name="invoiceHashIv"
+                  children={(field) => (
+                    <Field className="space-y-1">
+                      <FieldLabel htmlFor={field.name}>Hash IV</FieldLabel>
+                      <Input
+                        id={field.name}
+                        value={field.state.value ?? ''}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        disabled={isViewMode || isSubmitting}
+                      />
+                    </Field>
+                  )}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">發票捐贈與稅務</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form.Field
+                  name="defaultLoveCode"
+                  children={(field) => (
+                    <Field className="space-y-1">
+                      <FieldLabel htmlFor={field.name}>預設愛心碼</FieldLabel>
+                      <Input
+                        id={field.name}
+                        value={field.state.value ?? ''}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        disabled={isViewMode || isSubmitting}
+                      />
+                    </Field>
+                  )}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
