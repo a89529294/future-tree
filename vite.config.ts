@@ -27,7 +27,14 @@ const config = defineConfig({
       external: ['aws-crt', 'aws-iot-device-sdk-v2'],
     },
   },
-  server: {},
+  server: {
+    proxy: {
+      '/ws': {
+        target: 'ws://127.0.0.1:3003',
+        ws: true,
+      },
+    },
+  },
 })
 
 export default config
