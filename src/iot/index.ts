@@ -47,8 +47,8 @@ async function getIoTConnection(): Promise<mqtt.MqttClientConnection> {
 }
 
 export const publishUnlock = createServerFn({ method: 'POST' })
-  .inputValidator((data: { thingId: string; cells: Array<number> }) => data)
-  .handler(async ({ data: { cells, thingId } }) => {
+  .inputValidator((data: { clientId: string; cells: Array<number> }) => data)
+  .handler(async ({ data: { cells, clientId } }) => {
     try {
       const conn = await getIoTConnection()
 
@@ -58,7 +58,7 @@ export const publishUnlock = createServerFn({ method: 'POST' })
         timestamp: Date.now(),
       }
 
-      const topic = `cmd/${thingId}/unlock`
+      const topic = `cmd/${clientId}/unlock`
 
       await conn.publish(topic, JSON.stringify(payload), mqtt.QoS.AtLeastOnce)
 
@@ -75,64 +75,70 @@ export const publishUnlock = createServerFn({ method: 'POST' })
     }
   })
 
-export const subscribeToDoorState = createServerFn({ method: 'POST' })
-  .inputValidator((data: { thingId: string }) => data)
-  .handler(async ({ data: { thingId } }) => {
+function handleMqttMessage(receivedTopic: string, payload: ArrayBuffer) {
+  const message = new TextDecoder('utf-8').decode(payload)
+  console.log(`Received message on ${receivedTopic}:`, message)
+
+  try {
+    const data = JSON.parse(message)
+    broadcastToClients(receivedTopic, data)
+  } catch (e) {
+    console.error('Failed to parse message:', e)
+  }
+}
+
+export const subscribeToDevice = createServerFn({ method: 'POST' })
+  .inputValidator((data: { clientId: string }) => data)
+  .handler(async ({ data: { clientId } }) => {
     try {
       const conn = await getIoTConnection()
 
-      const topic = `state/${thingId}/door`
+      const doorTopic = `state/${clientId}/door`
+      const heartbeatTopic = `state/${clientId}/heartbeat`
 
       await conn.subscribe(
-        topic,
+        doorTopic,
         mqtt.QoS.AtLeastOnce,
-        (receivedTopic: string, payload: ArrayBuffer) => {
-          const message = new TextDecoder('utf-8').decode(payload)
-          console.log(`Received message on ${receivedTopic}:`, message)
-
-          try {
-            const data = JSON.parse(message)
-            // Handle the door state update here
-            console.log('Door state:', data)
-
-            // Broadcast to all connected WebSocket clients
-            broadcastToClients(receivedTopic, data)
-          } catch (e) {
-            console.error('Failed to parse message:', e)
-          }
-        },
+        handleMqttMessage,
+      )
+      await conn.subscribe(
+        heartbeatTopic,
+        mqtt.QoS.AtLeastOnce,
+        handleMqttMessage,
       )
 
-      console.log(`Subscribed to ${topic}`)
+      console.log(`Subscribed to ${doorTopic} and ${heartbeatTopic}`)
 
       return {
         success: true,
-        message: `Subscribed to ${topic}`,
+        message: `Subscribed to ${doorTopic} and ${heartbeatTopic}`,
       }
     } catch (error) {
-      console.error('Error subscribing to topic:', error)
+      console.error('Error subscribing to topics:', error)
       throw new Error(error instanceof Error ? error.message : 'Unknown error')
     }
   })
 
-export const unsubscribeFromDoorState = createServerFn({ method: 'POST' })
-  .inputValidator((data: { thingId: string }) => data)
-  .handler(async ({ data: { thingId } }) => {
+export const unsubscribeFromDevice = createServerFn({ method: 'POST' })
+  .inputValidator((data: { clientId: string }) => data)
+  .handler(async ({ data: { clientId } }) => {
     try {
       const conn = await getIoTConnection()
 
-      const topic = `state/${thingId}/door`
+      const doorTopic = `state/${clientId}/door`
+      const heartbeatTopic = `state/${clientId}/heartbeat`
 
-      await conn.unsubscribe(topic)
+      await conn.unsubscribe(doorTopic)
+      await conn.unsubscribe(heartbeatTopic)
 
-      console.log(`Unsubscribed from ${topic}`)
+      console.log(`Unsubscribed from ${doorTopic} and ${heartbeatTopic}`)
 
       return {
         success: true,
-        message: `Unsubscribed from ${topic}`,
+        message: `Unsubscribed from ${doorTopic} and ${heartbeatTopic}`,
       }
     } catch (error) {
-      console.error('Error unsubscribing from topic:', error)
+      console.error('Error unsubscribing from topics:', error)
       throw new Error(error instanceof Error ? error.message : 'Unknown error')
     }
   })

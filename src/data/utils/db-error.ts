@@ -71,13 +71,14 @@ export function getDbErrorMessage(error: unknown) {
       PostgresErrorHandlers[originalError.code ?? 'default'] ??
       PostgresErrorHandlers.default
 
-    return handler(originalError)
+    return { ...handler(originalError), originalError: error }
   }
 
   if (error instanceof DrizzleError) {
     return {
       message: error.message || 'An unexpected error occurred.',
       constraint: null,
+      originalError: error,
     }
   }
 
@@ -100,7 +101,7 @@ export function withDbErrors<TArgs, TResult>(
           constraint: dbError.constraint,
           originalError: error,
         })
-        throw new Error(dbError.message)
+        throw new Error(`DB: ${dbError.message}, ${dbError.originalError}`)
       }
 
       throw error

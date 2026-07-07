@@ -19,6 +19,9 @@ export const Route = createFileRoute('/_authenticated')({
     context.queryClient.ensureQueryData(countiesQueryOptions)
   },
   component: AuthenticatedLayout,
+  errorComponent(e) {
+    return e.error.message
+  },
 })
 
 function AuthenticatedLayout() {
@@ -39,7 +42,7 @@ function AuthenticatedLayout() {
         <div className="flex items-center gap-2 border-b h-16 px-4">
           <SidebarTrigger />
 
-          <GlobalBreadcrumb />
+          {/* <GlobalBreadcrumb /> */}
 
           <div className="flex items-center gap-4 ml-auto">
             <div className=" font-medium">

@@ -55,7 +55,7 @@ const readStore = createServerFn()
     ),
   )
 
-const readStores = createServerFn().handler(
+const readStores = createServerFn({ method: 'GET' }).handler(
   withDbErrors(
     withSleepInDev(async () => {
       const user = await requireAuth()

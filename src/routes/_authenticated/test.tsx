@@ -1,16 +1,24 @@
 import { useForm, useStore } from '@tanstack/react-form'
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   publishUnlock,
-  subscribeToDoorState,
-  unsubscribeFromDoorState,
+  subscribeToDevice,
+  unsubscribeFromDevice,
 } from '@/iot'
 
 export const Route = createFileRoute('/_authenticated/test')({
@@ -21,14 +29,43 @@ const DOOR_VALUES = ['1', '2', '3', '4', '5'] as const
 type DoorValue = (typeof DOOR_VALUES)[number]
 
 const testFormSchema = z.object({
-  thingId: z.string().trim().min(1, 'thingId 為必填欄位'),
+  clientId: z.string().trim().min(1, 'clientId 為必填欄位'),
   doors: z.array(z.enum(DOOR_VALUES)).min(1, '請至少選擇一個門'),
 })
+
+type DeviceDataType = 'door' | 'heartbeat'
+
+type DeviceData = {
+  door?: { data: unknown; timestamp: number }
+  heartbeat?: { data: unknown; timestamp: number }
+}
+
+type WsMessage = {
+  topic: string
+  data: unknown
+  timestamp: number
+}
+
+function parseTopic(topic: string): {
+  clientId: string
+  type: DeviceDataType
+} | null {
+  const parts = topic.split('/')
+  if (parts.length !== 3 || parts[0] !== 'state') return null
+  const clientId = parts[1]
+  const rawType = parts[2]
+  if (rawType !== 'door' && rawType !== 'heartbeat') return null
+  return { clientId, type: rawType }
+}
+
+function formatTimestamp(ts: number) {
+  return new Date(ts).toLocaleTimeString()
+}
 
 function TestPage() {
   const form = useForm({
     defaultValues: {
-      thingId: '',
+      clientId: '',
       doors: [] as Array<DoorValue>,
     },
     validators: {
@@ -36,12 +73,12 @@ function TestPage() {
     },
     onSubmit: ({ value }) => {
       console.log({
-        thingId: value.thingId.trim(),
+        clientId: value.clientId.trim(),
         doors: value.doors.map((door) => Number(door)),
       })
       publishUnlock({
         data: {
-          thingId: value.thingId.trim(),
+          clientId: value.clientId.trim(),
           cells: value.doors.map((door) => Number(door)),
         },
       })
@@ -53,20 +90,82 @@ function TestPage() {
 
   const subscribeForm = useForm({
     defaultValues: {
-      thingId: '',
+      clientId: '',
     },
   })
 
-  // useEffect(() => {
-  //   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  //   const ws = new WebSocket(`${protocol}//${`localhost:3003`}/ws`)
+  const [subscribedClients, setSubscribedClients] = useState<
+    Array<string>
+  >([])
+  const [deviceData, setDeviceData] = useState<
+    Record<string, DeviceData>
+  >({})
+  const [wsConnected, setWsConnected] = useState(false)
+  const wsRef = useRef<WebSocket | null>(null)
 
-  //   ws.onopen = () => console.log('🔗 Connected to WebSocket')
-  //   ws.onmessage = (event) => console.log('📨 Message:', event.data)
-  //   ws.onclose = () => console.log('🚫 Disconnected')
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host =
+      window.location.host.split(':').length > 1
+        ? `${window.location.host.split(':')[0]}:3003`
+        : window.location.host
+    const ws = new WebSocket(`${protocol}//${host}/ws`)
+    wsRef.current = ws
 
-  //   return () => ws.close()
-  // }, [])
+    ws.onopen = () => {
+      console.log('Connected to WebSocket')
+      setWsConnected(true)
+    }
+    ws.onmessage = (event) => {
+      try {
+        const msg: WsMessage = JSON.parse(event.data)
+        const parsed = parseTopic(msg.topic)
+        if (!parsed) return
+
+        const { clientId, type } = parsed
+        setDeviceData((prev) => ({
+          ...prev,
+          [clientId]: {
+            ...prev[clientId],
+            [type]: { data: msg.data, timestamp: msg.timestamp },
+          },
+        }))
+      } catch (e) {
+        console.error('Failed to parse WebSocket message:', e)
+      }
+    }
+    ws.onclose = () => {
+      console.log('Disconnected from WebSocket')
+      setWsConnected(false)
+    }
+
+    return () => {
+      ws.close()
+    }
+  }, [])
+
+  const handleSubscribe = async () => {
+    const clientId = subscribeForm.state.values.clientId
+    if (!clientId) return
+
+    await subscribeToDevice({ data: { clientId } })
+    setSubscribedClients((prev) =>
+      prev.includes(clientId) ? prev : [...prev, clientId],
+    )
+  }
+
+  const handleUnsubscribe = async () => {
+    const clientId = subscribeForm.state.values.clientId
+    if (!clientId) return
+
+    await unsubscribeFromDevice({ data: { clientId } })
+    setSubscribedClients((prev) => prev.filter((id) => id !== clientId))
+    setDeviceData((prev) => {
+      const next = { ...prev }
+      delete next[clientId]
+      return next
+    })
+  }
 
   return (
     <div className="p-4 space-y-6">
@@ -82,13 +181,13 @@ function TestPage() {
         className="space-y-6 max-w-md"
       >
         <form.Field
-          name="thingId"
+          name="clientId"
           children={(field) => {
             const isInvalid =
               field.state.meta.isTouched && !field.state.meta.isValid
             return (
               <Field className="space-y-1" data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>thingId</FieldLabel>
+                <FieldLabel htmlFor={field.name}>clientId</FieldLabel>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -153,6 +252,12 @@ function TestPage() {
 
       <div className="space-y-2">
         <h2 className="text-xl font-bold">Subscribe/Unsubscribe</h2>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>WebSocket:</span>
+          <Badge variant={wsConnected ? 'default' : 'secondary'}>
+            {wsConnected ? 'Connected' : 'Disconnected'}
+          </Badge>
+        </div>
       </div>
 
       <form
@@ -162,10 +267,10 @@ function TestPage() {
         className="space-y-4 max-w-md"
       >
         <subscribeForm.Field
-          name="thingId"
+          name="clientId"
           children={(field) => (
             <Field className="space-y-1">
-              <FieldLabel htmlFor={field.name}>thingId</FieldLabel>
+              <FieldLabel htmlFor={field.name}>clientId</FieldLabel>
               <Input
                 id={field.name}
                 name={field.name}
@@ -177,42 +282,76 @@ function TestPage() {
         />
 
         <div className="flex gap-3">
-          <Button
-            type="button"
-            onClick={async () => {
-              const thingId = subscribeForm.state.values.thingId
-              if (thingId) {
-                await subscribeToDoorState({ data: { thingId } })
-
-                const protocol =
-                  window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-                const host =
-                  window.location.host.split(':').length > 1
-                    ? `${window.location.host.split(':')[0]}:3003`
-                    : window.location.host
-                const ws = new WebSocket(`${protocol}//${host}/ws`)
-
-                ws.onopen = () => console.log('🔗 Connected to WebSocket')
-                ws.onmessage = (event) => console.log('📨 Message:', event.data)
-                ws.onclose = () => console.log('🚫 Disconnected')
-              }
-            }}
-          >
+          <Button type="button" onClick={handleSubscribe}>
             Subscribe
           </Button>
-          <Button
-            type="button"
-            onClick={async () => {
-              const thingId = subscribeForm.state.values.thingId
-              if (thingId) {
-                await unsubscribeFromDoorState({ data: { thingId } })
-              }
-            }}
-          >
+          <Button type="button" onClick={handleUnsubscribe}>
             Unsubscribe
           </Button>
         </div>
       </form>
+
+      {subscribedClients.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">Subscribed Devices</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {subscribedClients.map((clientId) => {
+              const info = deviceData[clientId] as DeviceData | undefined
+              return (
+                <Card key={clientId}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>{clientId}</span>
+                      <Badge variant="outline">{clientId}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">Door</Badge>
+                        {info?.door ? (
+                          <span className="text-xs text-muted-foreground">
+                            {formatTimestamp(info.door.timestamp)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Waiting for data...
+                          </span>
+                        )}
+                      </div>
+                      {info?.door && (
+                        <pre className="text-xs bg-muted rounded-md p-2 overflow-auto">
+                          {JSON.stringify(info.door.data, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">Heartbeat</Badge>
+                        {info?.heartbeat ? (
+                          <span className="text-xs text-muted-foreground">
+                            {formatTimestamp(info.heartbeat.timestamp)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Waiting for data...
+                          </span>
+                        )}
+                      </div>
+                      {info?.heartbeat && (
+                        <pre className="text-xs bg-muted rounded-md p-2 overflow-auto">
+                          {JSON.stringify(info.heartbeat.data, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

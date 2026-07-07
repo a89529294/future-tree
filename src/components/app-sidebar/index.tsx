@@ -48,11 +48,11 @@ export function AppSidebar() {
         )}
 
         {/* Branches Section */}
-        {canReadBranches && (
+        {/* {canReadBranches && (
           <Suspense fallback={<CollapsibleBranchesFallback />}>
             <CollapsibleBranches />
           </Suspense>
-        )}
+        )} */}
 
         {/* Machines Section - just a link for now */}
         {canReadMachines && (
