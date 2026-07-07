@@ -41,11 +41,11 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         {/* Stores Section */}
-        {canReadStores && (
+        {/* {canReadStores && (
           <Suspense fallback={<CollapsibleStoresFallback />}>
             <CollapsibleStores />
           </Suspense>
-        )}
+        )} */}
 
         {/* Branches Section */}
         {/* {canReadBranches && (
@@ -55,7 +55,7 @@ export function AppSidebar() {
         )} */}
 
         {/* Machines Section - just a link for now */}
-        {canReadMachines && (
+        {/* {canReadMachines && (
           <SidebarGroup>
             <SidebarGroupLabel>
               <StoreIcon />
@@ -66,7 +66,7 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarGroupLabel>
           </SidebarGroup>
-        )}
+        )} */}
 
         {/* Test Section */}
         <SidebarGroup>
