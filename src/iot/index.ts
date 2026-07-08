@@ -46,12 +46,42 @@ async function getIoTConnection(): Promise<mqtt.MqttClientConnection> {
   }
 }
 
+async function resetConnection() {
+  if (!connection) return
+  try {
+    await connection.disconnect()
+  } catch (error) {
+    console.error('Failed to disconnect stale MQTT connection:', error)
+  }
+  connection = null
+}
+
+function isStaleSessionError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes('AWS_ERROR_MQTT_CANCELLED_FOR_CLEAN_SESSION')
+  )
+}
+
+async function withMqttRetry<T>(
+  operation: (conn: mqtt.MqttClientConnection) => Promise<T>,
+): Promise<T> {
+  try {
+    const conn = await getIoTConnection()
+    return await operation(conn)
+  } catch (error) {
+    if (!isStaleSessionError(error)) throw error
+    console.log('MQTT connection stale, reconnecting and retrying...')
+    await resetConnection()
+    const conn = await getIoTConnection()
+    return await operation(conn)
+  }
+}
+
 export const publishUnlock = createServerFn({ method: 'POST' })
   .inputValidator((data: { clientId: string; cells: Array<number> }) => data)
   .handler(async ({ data: { cells, clientId } }) => {
     try {
-      const conn = await getIoTConnection()
-
       const payload = {
         request_id: 'tx_001',
         cells,
@@ -60,7 +90,9 @@ export const publishUnlock = createServerFn({ method: 'POST' })
 
       const topic = `cmd/${clientId}/unlock`
 
-      await conn.publish(topic, JSON.stringify(payload), mqtt.QoS.AtLeastOnce)
+      await withMqttRetry(async (conn) => {
+        await conn.publish(topic, JSON.stringify(payload), mqtt.QoS.AtLeastOnce)
+      })
 
       console.log(`Published to ${topic}:`, payload)
 
@@ -91,21 +123,21 @@ export const subscribeToDevice = createServerFn({ method: 'POST' })
   .inputValidator((data: { clientId: string }) => data)
   .handler(async ({ data: { clientId } }) => {
     try {
-      const conn = await getIoTConnection()
-
       const doorTopic = `state/${clientId}/door`
       const heartbeatTopic = `state/${clientId}/heartbeat`
 
-      await conn.subscribe(
-        doorTopic,
-        mqtt.QoS.AtLeastOnce,
-        handleMqttMessage,
-      )
-      await conn.subscribe(
-        heartbeatTopic,
-        mqtt.QoS.AtLeastOnce,
-        handleMqttMessage,
-      )
+      await withMqttRetry(async (conn) => {
+        await conn.subscribe(
+          doorTopic,
+          mqtt.QoS.AtLeastOnce,
+          handleMqttMessage,
+        )
+        await conn.subscribe(
+          heartbeatTopic,
+          mqtt.QoS.AtLeastOnce,
+          handleMqttMessage,
+        )
+      })
 
       console.log(`Subscribed to ${doorTopic} and ${heartbeatTopic}`)
 
@@ -123,13 +155,13 @@ export const unsubscribeFromDevice = createServerFn({ method: 'POST' })
   .inputValidator((data: { clientId: string }) => data)
   .handler(async ({ data: { clientId } }) => {
     try {
-      const conn = await getIoTConnection()
-
       const doorTopic = `state/${clientId}/door`
       const heartbeatTopic = `state/${clientId}/heartbeat`
 
-      await conn.unsubscribe(doorTopic)
-      await conn.unsubscribe(heartbeatTopic)
+      await withMqttRetry(async (conn) => {
+        await conn.unsubscribe(doorTopic)
+        await conn.unsubscribe(heartbeatTopic)
+      })
 
       console.log(`Unsubscribed from ${doorTopic} and ${heartbeatTopic}`)
 
