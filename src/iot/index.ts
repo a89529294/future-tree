@@ -57,10 +57,8 @@ async function resetConnection() {
 }
 
 function isStaleSessionError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    error.message.includes('AWS_ERROR_MQTT_CANCELLED_FOR_CLEAN_SESSION')
-  )
+  const message = error instanceof Error ? error.message : String(error)
+  return message.includes('AWS_ERROR_MQTT_CANCELLED_FOR_CLEAN_SESSION')
 }
 
 async function withMqttRetry<T>(
